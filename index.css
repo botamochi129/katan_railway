@@ -9,6 +9,19 @@ body {
 }
 
 /* ヘッダースタイル */
+.logo-link {
+  color: inherit;            /* 親の文字色を継承 */
+  text-decoration: none;     /* 下線を消す */
+}
+
+.logo-link:hover,
+.logo-link:focus,
+.logo-link:active {
+  color: inherit;           /* ホバー時などの色も変えない */
+  text-decoration: none;    /* 下線もつけない */
+  cursor: pointer;          /* クリック可能カーソル */
+}
+
 .header-inner {
   display: flex;
   justify-content: space-between;
