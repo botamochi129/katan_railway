@@ -1,3 +1,4 @@
+/* ベース設定 */
 body {
   font-family: "游ゴシック体", "Yu Gothic", sans-serif;
   line-height: 1.6;
@@ -7,32 +8,62 @@ body {
   color: #333;
 }
 
-header {
+/* ヘッダースタイル */
+.header-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
   background-color: #00457c;
   color: white;
-  padding: 1rem;
+  position: relative;
 }
 
-header h1 {
-  margin: 0;
+.logo-area {
+  display: flex;
+  align-items: center;
 }
 
+.logo-img {
+  height: 50px;
+  margin-right: 10px;
+}
+
+.logo-text {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+/* ナビメニュー */
 nav ul {
   list-style: none;
   padding: 0;
+  margin: 0;
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 nav a {
   color: white;
   text-decoration: none;
+  font-weight: 600;
 }
 
 nav a:hover {
   text-decoration: underline;
 }
 
+/* モバイル用ハンバーガーボタン */
+#nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+/* メインコンテンツ */
 main {
   padding: 2rem;
   max-width: 960px;
@@ -45,12 +76,62 @@ section h2 {
   border-bottom: 2px solid #00457c;
   padding-bottom: 0.5rem;
   margin-top: 0;
+  margin-bottom: 1rem;
 }
 
+/* 代表あいさつ */
+#greeting {
+  background-color: #f9fafb;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem 1.5rem;
+  margin-top: 2rem;
+}
+
+.greeting-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.president-img {
+  width: 150px;
+  height: auto;
+  border-radius: 50%;
+  border: 2px solid #00457c;
+}
+
+#greeting p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+/* フッター */
 footer {
   text-align: center;
   padding: 1rem;
   background-color: #e1e8f0;
   color: #666;
   margin-top: 2rem;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  nav ul {
+    flex-direction: column;
+    background-color: #00457c;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 200px;
+    display: none;
+    padding: 1rem 0;
+    border-radius: 0 0 0 6px;
+  }
+  nav ul.open {
+    display: flex;
+  }
+  #nav-toggle {
+    display: block;
+  }
 }
