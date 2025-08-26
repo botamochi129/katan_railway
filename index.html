@@ -30,10 +30,10 @@
   <main>
     <section id="news">
       <h2>最近のお知らせ</h2>
-      <ul>
-        <li>2025年8月26日：ホームページリニューアルしました。</li>
-        <li>2025年9月1日：新しい路線開業予定。</li>
+      <ul id="latest-news">
+        <!-- JavaScriptで最新5件のお知らせがここに入る -->
       </ul>
+      <p><a href="info.html">お知らせ一覧へ</a></p>
     </section>
   </main>
 
@@ -48,6 +48,30 @@
     navToggle.addEventListener('click', () => {
       navMenu.classList.toggle('open');
     });
+
+    async function loadLatestNews() {
+      try {
+        const response = await fetch('info.html');
+        const text = await response.text();
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        const newsItems = doc.querySelectorAll('#news-list li');
+        
+        const latestNews = Array.from(newsItems).slice(0, 5);
+        const ul = document.getElementById('latest-news');
+        ul.innerHTML = '';
+
+        latestNews.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = item.textContent;
+          ul.appendChild(li);
+        });
+      } catch (e) {
+        console.error('お知らせの読み込みに失敗しました:', e);
+      }
+    }
+    loadLatestNews();
   </script>
 </body>
 </html>
