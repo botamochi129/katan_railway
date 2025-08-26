@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>勝炭鉄道 - 代表あいさつ</title>
+  <link rel="stylesheet" href="index.css" />
+  <link rel="icon" type="image/png" href="image/KR_rogo.png" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo-area">
+        <img src="image/KR_rogo.png" alt="勝炭鉄道ロゴ" class="logo-img" />
+        <span class="logo-text">勝炭鉄道</span>
+      </div>
+      <button id="nav-toggle" aria-label="メニュー開閉">&#9776;</button>
+      <nav id="nav-menu" class="nav-menu">
+        <ul>
+          <li><a href="index.html">ホーム</a></li>
+          <li><a href="stations.html">駅情報</a></li>
+          <li><a href="fares.html">運賃案内</a></li>
+          <li><a href="company.html">会社情報</a></li>
+          <li><a href="greeting.html">代表あいさつ</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <h2>代表あいさつ</h2>
+    <div class="greeting-content">
+      <img src="image/botamochi_icon.png" alt="社長" class="president-img" />
+      <p>勝炭鉄道株式会社代表取締役のぼたもちでございます。お客様に安全・快適な鉄道サービスを提供し、地域社会とともに発展してまいります。今後ともどうぞよろしくお願いいたします。</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2025 勝炭鉄道株式会社 All Rights Reserved.</p>
+  </footer>
+
+  <script>
+    const navToggle = document.getElementById('nav-toggle');
+    const navMenu = document.getElementById('nav-menu');
+    navToggle.addEventListener('click', () => {
+      navMenu.classList.toggle('open');
+    });
+  </script>
+</body>
+</html>
