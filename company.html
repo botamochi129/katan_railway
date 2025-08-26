@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>勝炭鉄道 - 会社情報</title>
+  <link rel="stylesheet" href="index.css" />
+  <link rel="icon" type="image/png" href="image/KR_rogo.png" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo-area">
+        <img src="image/KR_rogo.png" alt="勝炭鉄道ロゴ" class="logo-img" />
+        <span class="logo-text">勝炭鉄道</span>
+      </div>
+      <button id="nav-toggle" aria-label="メニュー開閉">&#9776;</button>
+      <nav id="nav-menu" class="nav-menu">
+        <ul>
+          <li><a href="index.html">ホーム</a></li>
+          <li><a href="stations.html">駅情報</a></li>
+          <li><a href="fares.html">運賃案内</a></li>
+          <li><a href="company.html">会社情報</a></li>
+          <li><a href="greeting.html">代表あいさつ</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <h2>会社情報</h2>
+    <p>勝炭鉄道株式会社</p>
+    <p>設立：2025年4月1日</p>
+    <p>住所：架空県架空市1-1-1</p>
+    <p>勝炭鉄道は地域の皆様に安全で快適な鉄道サービスを提供し、地域社会の発展に貢献しています。</p>
+  </main>
+
+  <footer>
+    <p>© 2025 勝炭鉄道株式会社 All Rights Reserved.</p>
+  </footer>
+
+  <script>
+    const navToggle = document.getElementById('nav-toggle');
+    const navMenu = document.getElementById('nav-menu');
+    navToggle.addEventListener('click', () => {
+      navMenu.classList.toggle('open');
+    });
+  </script>
+</body>
+</html>
