@@ -8,30 +8,13 @@
   <link rel="icon" type="image/png" href="image/KR_rogo.png" />
 </head>
 <body>
-  <header>
-    <div class="header-inner">
-      <div class="logo-area">
-        <img src="image/KR_rogo.png" alt="勝炭鉄道ロゴ" class="logo-img" />
-        <span class="logo-text">勝炭鉄道</span>
-      </div>
-      <button id="nav-toggle" aria-label="メニュー開閉">&#9776;</button>
-      <nav id="nav-menu" class="nav-menu">
-        <ul>
-          <li><a href="info.html">お知らせ</a></li>
-          <li><a href="stations.html">駅情報</a></li>
-          <li><a href="fares.html">運賃案内</a></li>
-          <li><a href="company.html">会社情報</a></li>
-          <li><a href="greeting.html">代表あいさつ</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
+  <div id="header-placeholder"></div>
 
   <main>
     <h2>路線図と駅選択</h2>
-    <img src="image/route_map.png" alt="勝炭鉄道 路線図" style="max-width:100%; height:auto;" />
-
+    <img src="image/route_map.png" alt="勝炭鉄道 路線図" style="max-width: 100%; height: auto;" />
     <p>駅を選択してください：</p>
+
     <select id="station-select">
       <option value="" selected disabled>駅を選ぶ</option>
       <option value="katsutan.html">勝炭駅</option>
@@ -47,17 +30,28 @@
     </script>
   </main>
 
-  <footer>
-    <p>© 2025 勝炭鉄道株式会社 All Rights Reserved.</p>
-  </footer>
+  <div id="footer-placeholder"></div>
 
   <script>
-    const navToggle = document.getElementById('nav-toggle');
-    const navMenu = document.getElementById('nav-menu');
-
-    navToggle.addEventListener('click', () => {
-      navMenu.classList.toggle('open');
+    async function loadTemplate(id, url) {
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        document.getElementById(id).innerHTML = text;
+      } catch (e) {
+        console.error(`Failed to load ${url}:`, e);
+      }
+    }
+    loadTemplate('header-placeholder', 'header.html').then(() => {
+      const navToggle = document.getElementById('nav-toggle');
+      const navMenu = document.getElementById('nav-menu');
+      if (navToggle && navMenu) {
+        navToggle.addEventListener('click', () => {
+          navMenu.classList.toggle('open');
+        });
+      }
     });
+    loadTemplate('footer-placeholder', 'footer.html');
   </script>
 </body>
 </html>
