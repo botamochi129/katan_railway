@@ -2,21 +2,28 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>勝炭鉄道 | 公式サイト</title>
   <link rel="stylesheet" href="index.css" />
 </head>
 <body>
   <header>
-    <h1>勝炭鉄道</h1>
-    <nav>
-      <ul>
-        <li><a href="#news">お知らせ</a></li>
-        <li><a href="#stations">駅情報</a></li>
-        <li><a href="#fares">運賃案内</a></li>
-        <li><a href="#company">会社情報</a></li>
-      </ul>
-    </nav>
+    <div class="header-inner">
+      <div class="logo-area">
+        <img src="/image/KR_rogo.png" alt="勝炭鉄道ロゴ" class="logo-img" />
+        <span class="logo-text">勝炭鉄道</span>
+      </div>
+      <button id="nav-toggle" aria-label="メニュー開閉">&#9776;</button>
+      <nav id="nav-menu" class="nav-menu">
+        <ul>
+          <li><a href="#news">お知らせ</a></li>
+          <li><a href="#stations">駅情報</a></li>
+          <li><a href="#fares">運賃案内</a></li>
+          <li><a href="#company">会社情報</a></li>
+          <li><a href="#greeting">代表あいさつ</a></li>
+        </ul>
+      </nav>
+    </div>
   </header>
 
   <main>
@@ -48,10 +55,28 @@
       <p>設立：2025年4月1日</p>
       <p>住所：架空県架空市1-1-1</p>
     </section>
+
+    <section id="greeting">
+      <h2>代表あいさつ</h2>
+      <div class="greeting-content">
+        <img src="/image/botamochi_icon.png" alt="社長" class="president-img" />
+        <p>勝炭鉄道株式会社代表取締役の牡丹餅でございます。お客様に安全・快適な鉄道サービスを提供し、地域社会とともに発展してまいります。今後ともどうぞよろしくお願いいたします。</p>
+      </div>
+    </section>
   </main>
 
   <footer>
     <p>© 2025 勝炭鉄道株式会社 All Rights Reserved.</p>
   </footer>
+
+  <script>
+    // ナビメニューの開閉処理（レスポンシブ対応）
+    const navToggle = document.getElementById('nav-toggle');
+    const navMenu = document.getElementById('nav-menu');
+
+    navToggle.addEventListener('click', () => {
+      navMenu.classList.toggle('open');
+    });
+  </script>
 </body>
 </html>
