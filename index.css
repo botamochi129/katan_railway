@@ -25,7 +25,7 @@ body {
 }
 
 .logo-img {
-  width: 120px;  /* 幅を120pxに調整 */
+  width: 60px;  /* 幅を120pxに調整 */
   height: auto;  /* 高さは自動で比例調整 */
   margin-right: 10px;
 }
