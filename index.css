@@ -12,6 +12,43 @@ body {
     background-color: #f7f7f7;
 }
 
+.branch-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 30px;
+}
+
+.branch-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 220px;
+    text-decoration: none;
+    color: #00468b;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.branch-card img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.branch-card span {
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+.branch-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
 .branch-card img {
     width: 100%;
     height: auto;
