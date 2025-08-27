@@ -150,6 +150,23 @@
         }
     
         loadUpdates();
+
+        const branchCards = document.querySelectorAll('.branch-card');
+        
+        branchCards.forEach(card => {
+            const newsFile = card.dataset.news;
+            fetch(`data/news_${newsFile}.json`)
+                .then(res => res.json())
+                .then(news => {
+                    const ul = card.querySelector('.branch-news');
+                    news.slice(0, 3).forEach(item => {  // 最新3件表示
+                        const li = document.createElement('li');
+                        li.textContent = `${item.date} - ${item.title}`;
+                        ul.appendChild(li);
+                    });
+                });
+        });
+
     </script>
 </body>
 </html>
