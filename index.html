@@ -43,23 +43,16 @@
             </div>
         </section>
 
-       <section id="service">
-            <h2>運行情報</h2>
-            <div class="info-cards" id="news-container">
-                <!-- JSONから読み込んだニュースがここに挿入されます -->
+        <section id="updates">
+            <h2>最新情報</h2>
+            <div class="info-cards" id="updates-container">
+                <!-- JSONから読み込んだニュース・イベントがここに挿入されます -->
             </div>
         </section>
 
         <section id="about">
             <h2>会社概要</h2>
             <p>勝炭鉄道株式会社は、東京都と茨城県を結ぶ鉄道会社です。沿線の1都3県11市区と民間企業等の出資により設立された第三セクター鉄道です。</p>
-        </section>
-
-        <section id="events">
-            <h2>沿線イベント</h2>
-            <div class="info-cards" id="events-container">
-                <!-- JSONから読み込んだイベントがここに挿入されます -->
-            </div>
         </section>
 
         <section id="recruit">
@@ -99,51 +92,39 @@
             showSlide(currentSlide);
         }, 5000);
 
-        // ニュースJSONを読み込み、カード生成
-        async function loadNews() {
-            try {
-                const response = await fetch('data/news.json');
-                const news = await response.json();
-                const container = document.getElementById('news-container');
-    
-                news.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.innerHTML = `
-                        <h3>${item.date} - ${item.title}</h3>
-                        <p>${item.content}</p>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (error) {
-                console.error("ニュースの読み込みに失敗しました:", error);
-            }
+        async function loadUpdates() {
+        try {
+            // ニュース・イベントを同時に取得
+            const [newsRes, eventsRes] = await Promise.all([
+                fetch('data/news.json'),
+                fetch('data/events.json')
+            ]);
+            const news = await newsRes.json();
+            const events = await eventsRes.json();
+
+            // 両方を統合
+            const updates = [...news.map(item => ({...item, type: 'ニュース'})),
+                             ...events.map(item => ({...item, type: 'イベント'}))];
+
+            // 日付順にソート（降順）
+            updates.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const container = document.getElementById('updates-container');
+            updates.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <h3>${item.date} - ${item.title} <span class="type">[${item.type}]</span></h3>
+                    <p>${item.content}</p>
+                `;
+                container.appendChild(card);
+            });
+        } catch (error) {
+            console.error("最新情報の読み込みに失敗しました:", error);
         }
-    
-        // イベントJSONを読み込み、カード生成
-        async function loadEvents() {
-            try {
-                const response = await fetch('data/events.json');
-                const events = await response.json();
-                const container = document.getElementById('events-container');
-    
-                events.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.innerHTML = `
-                        <h3>${item.date} - ${item.title}</h3>
-                        <p>${item.content}</p>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (error) {
-                console.error("イベントの読み込みに失敗しました:", error);
-            }
-        }
-    
-        // ページ読み込み時に実行
-        loadNews();
-        loadEvents();
+    }
+
+    loadUpdates();
     </script>
 </body>
 </html>
