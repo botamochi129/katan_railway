@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KT01 戸六駅 | 勝炭鉄道</title>
+    <link rel="stylesheet" href="../../index.css">
+</head>
+<body>
+    <div id="header-container"></div>
+
+    <main>
+        <h2>KT01 戸六駅</h2>
+        <p>所在地：岩木県戸六市</p>
+        <p>乗り換え可能路線：戸六空港モノレール線・赤砂高原鉄道線</p>
+        <p>駅施設：改札、自動券売機</p>
+        <h3>時刻表</h3>
+        <p>平日・休日別の列車時刻を表示（後で JSON 連携可能）</p>
+        <h3>周辺情報</h3>
+        <p>駅周辺の観光・商業施設案内</p>
+    </main>
+
+    <div id="footer-container"></div>
+
+    <script>
+        fetch('../../header.html').then(r => r.text()).then(t => document.getElementById('header-container').innerHTML = t);
+        fetch('../../footer.html').then(r => r.text()).then(t => document.getElementById('footer-container').innerHTML = t);
+    </script>
+</body>
+</html>
