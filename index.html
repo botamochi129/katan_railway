@@ -57,7 +57,9 @@
 
         <section id="events">
             <h2>沿線イベント</h2>
-            <p>地域との連携を深めるため、さまざまなイベントを開催しています。詳細はイベントページをご覧ください。</p>
+            <div class="info-cards" id="events-container">
+                <!-- JSONから読み込んだイベントがここに挿入されます -->
+            </div>
         </section>
 
         <section id="recruit">
@@ -118,7 +120,30 @@
             }
         }
     
+        // イベントJSONを読み込み、カード生成
+        async function loadEvents() {
+            try {
+                const response = await fetch('data/events.json');
+                const events = await response.json();
+                const container = document.getElementById('events-container');
+    
+                events.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <h3>${item.date} - ${item.title}</h3>
+                        <p>${item.content}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error("イベントの読み込みに失敗しました:", error);
+            }
+        }
+    
+        // ページ読み込み時に実行
         loadNews();
+        loadEvents();
     </script>
 </body>
 </html>
