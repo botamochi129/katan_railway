@@ -1,151 +1,126 @@
-/* ベース設定 */
+/* リセット */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
-  font-family: "游ゴシック体", "Yu Gothic", sans-serif;
-  line-height: 1.6;
-  margin: 0;
-  padding: 0;
-  background-color: #f1f5f9;
-  color: #333;
+    font-family: 'Yu Gothic', 'Hiragino Kaku Gothic Pro', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f7f7f7;
 }
 
-/* ヘッダースタイル */
-.logo-link {
-  color: inherit;            /* 親の文字色を継承 */
-  text-decoration: none;     /* 下線を消す */
+header {
+    background-color: #00468b; /* 鉄道会社風ブルー */
+    color: #fff;
+    padding: 20px 0;
 }
 
-.logo-link:hover,
-.logo-link:focus,
-.logo-link:active {
-  color: inherit;           /* ホバー時などの色も変えない */
-  text-decoration: none;    /* 下線もつけない */
-  cursor: pointer;          /* クリック可能カーソル */
+header .logo img {
+    height: 50px;
+    margin-left: 20px;
 }
 
-.header-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background-color: #00457c;
-  color: white;
-  position: relative;
-}
-
-.logo-area {
-  display: flex;
-  align-items: center;
-}
-
-.logo-img {
-  width: 50px;
-  height: auto;  /* 高さは自動で比例調整 */
-  margin-right: 10px;
-}
-
-.logo-text {
-  font-size: 1.8rem;
-  font-weight: bold;
-}
-
-/* ナビメニュー */
 nav ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  gap: 1.5rem;
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
 }
 
-nav a {
-  color: white;
-  text-decoration: none;
-  font-weight: 600;
+nav ul li {
+    margin: 0 15px;
 }
 
-nav a:hover {
-  text-decoration: underline;
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
 }
 
-/* モバイル用ハンバーガーボタン */
-#nav-toggle {
-  display: none;
-  background: none;
-  border: none;
-  color: white;
-  font-size: 2rem;
-  cursor: pointer;
+nav ul li a:hover {
+    text-decoration: underline;
 }
 
-/* メインコンテンツ */
 main {
-  padding: 2rem;
-  max-width: 960px;
-  margin: 0 auto;
-  background-color: white;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+section {
+    margin-bottom: 60px;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+section#hero {
+    background-color: #0072ce;
+    color: #fff;
+    text-align: center;
+    padding: 80px 20px;
+    border-radius: 10px;
+    margin-bottom: 60px;
+}
+
+section#hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+}
+
+section#hero p {
+    font-size: 1.2rem;
 }
 
 section h2 {
-  border-bottom: 2px solid #00457c;
-  padding-bottom: 0.5rem;
-  margin-top: 0;
-  margin-bottom: 1rem;
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    color: #00468b;
 }
 
-/* 代表あいさつ */
-#greeting {
-  background-color: #f9fafb;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 1rem 1.5rem;
-  margin-top: 2rem;
-}
-
-.greeting-content {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.president-img {
-  width: 150px;
-  height: auto;
-  border-radius: 50%;
-  border: 2px solid #00457c;
-}
-
-#greeting p {
-  font-size: 1.1rem;
-  line-height: 1.6;
-}
-
-/* フッター */
 footer {
-  text-align: center;
-  padding: 1rem;
-  background-color: #e1e8f0;
-  color: #666;
-  margin-top: 2rem;
+    background-color: #00468b;
+    color: #fff;
+    text-align: center;
+    padding: 20px 0;
+}
+
+footer nav ul {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+footer nav ul li {
+    margin: 0 10px;
+}
+
+footer nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+footer nav ul li a:hover {
+    text-decoration: underline;
 }
 
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
-  nav ul {
-    flex-direction: column;
-    background-color: #00457c;
-    position: absolute;
-    top: 100%;
-    right: 0;
-    width: 200px;
-    display: none;
-    padding: 1rem 0;
-    border-radius: 0 0 0 6px;
-  }
-  nav ul.open {
-    display: flex;
-  }
-  #nav-toggle {
-    display: block;
-  }
+    nav ul {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    nav ul li {
+        margin: 10px 0;
+    }
+
+    section#hero {
+        padding: 60px 20px;
+    }
 }
