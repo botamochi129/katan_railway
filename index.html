@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="勝炭鉄道の公式ウェブサイト。沿線の魅力や運行情報をご案内します。">
     <title>勝炭鉄道株式会社</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="index.css">
     <link rel="icon" href="favicon.ico">
 </head>
 <body>
@@ -25,19 +25,46 @@
     </header>
 
     <main>
+        <!-- スライダー -->
         <section id="hero">
-            <h1>勝炭鉄道へようこそ</h1>
-            <p>未来をつなぐ、地域を育む。</p>
+            <div class="slider">
+                <div class="slide active">
+                    <img src="slide1.jpg" alt="沿線風景1">
+                    <div class="caption">未来をつなぐ、地域を育む。</div>
+                </div>
+                <div class="slide">
+                    <img src="slide2.jpg" alt="沿線風景2">
+                    <div class="caption">快適で安全な鉄道サービス。</div>
+                </div>
+                <div class="slide">
+                    <img src="slide3.jpg" alt="沿線風景3">
+                    <div class="caption">沿線の魅力をお届けします。</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 最新運行情報カード -->
+        <section id="service">
+            <h2>運行情報</h2>
+            <div class="info-cards">
+                <div class="card">
+                    <h3>8/27 09:00</h3>
+                    <p>快速列車が遅延しています。お急ぎの方は各駅でのご案内をご確認ください。</p>
+                </div>
+                <div class="card">
+                    <h3>8/27 07:30</h3>
+                    <p>全線通常運行中です。</p>
+                </div>
+                <div class="card">
+                    <h3>8/26 18:00</h3>
+                    <p>台風接近に伴い、終日運休の可能性があります。最新情報をご確認ください。</p>
+                </div>
+            </div>
         </section>
 
         <section id="about">
             <h2>会社概要</h2>
-            <p>勝炭鉄道株式会社は、東京都の秋葉原と茨城県のつくばを結ぶ「つくばエクスプレス」を運行しています。沿線の1都3県11市区と民間企業等の出資により設立された第三セクターの鉄道会社です。</p>
-        </section>
-
-        <section id="service">
-            <h2>運行情報</h2>
-            <p>運行状況や時刻表、運賃情報など、最新の運行情報をご案内します。</p>
+            <p>勝炭鉄道株式会社は、東京都と茨城県を結ぶ鉄道会社です。沿線の1都3県11市区と民間企業等の出資により設立された第三セクター鉄道です。</p>
         </section>
 
         <section id="events">
@@ -65,5 +92,22 @@
             </ul>
         </nav>
     </footer>
+
+    <!-- スライダー用スクリプト -->
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll(".slide");
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.toggle("active", i === index);
+            });
+        }
+
+        setInterval(() => {
+            currentSlide = (currentSlide + 1) % slides.length;
+            showSlide(currentSlide);
+        }, 5000);
+    </script>
 </body>
 </html>
