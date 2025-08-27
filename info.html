@@ -7,63 +7,117 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
-    <header>
-        <div class="logo">
-            <img src="logo.png" alt="勝炭鉄道株式会社">
+<header>
+    <div class="logo">
+        <img src="logo.png" alt="勝炭鉄道株式会社">
+    </div>
+    <nav>
+        <ul>
+            <li><a href="index.html">トップページ</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main>
+    <section id="updates">
+        <h2>最新情報一覧</h2>
+
+        <!-- カテゴリフィルタ -->
+        <div class="filter">
+            <button data-type="all">すべて</button>
+            <button data-type="ニュース">ニュース</button>
+            <button data-type="イベント">イベント</button>
         </div>
-        <nav>
-            <ul>
-                <li><a href="index.html">トップページ</a></li>
-                <li><a href="#updates">最新情報</a></li>
-            </ul>
-        </nav>
-    </header>
 
-    <main>
-        <section id="updates">
-            <h2>最新情報一覧</h2>
-            <div class="info-cards" id="updates-container">
-                <!-- JSONからすべてのニュース・イベントを挿入 -->
-            </div>
-        </section>
-    </main>
+        <div class="info-cards" id="updates-container">
+            <!-- JSONから挿入 -->
+        </div>
 
-    <footer>
-        <p>&copy; 2025 勝炭鉄道株式会社</p>
-    </footer>
+        <!-- ページネーション -->
+        <div class="pagination" id="pagination"></div>
+    </section>
+</main>
 
-    <script>
-        async function loadAllUpdates() {
-            try {
-                const [newsRes, eventsRes] = await Promise.all([
-                    fetch('data/news.json'),
-                    fetch('data/events.json')
-                ]);
-                const news = await newsRes.json();
-                const events = await eventsRes.json();
+<footer>
+    <p>&copy; 2025 勝炭鉄道株式会社</p>
+</footer>
 
-                const updates = [...news.map(item => ({...item, type: 'ニュース'})),
-                                 ...events.map(item => ({...item, type: 'イベント'}))];
+<script>
+    const updatesPerPage = 5;
+    let allUpdates = [];
+    let currentPage = 1;
+    let currentFilter = 'all';
 
-                updates.sort((a, b) => new Date(b.date) - new Date(a.date));
+    async function loadAllUpdates() {
+        try {
+            const [newsRes, eventsRes] = await Promise.all([
+                fetch('data/news.json'),
+                fetch('data/events.json')
+            ]);
+            const news = await newsRes.json();
+            const events = await eventsRes.json();
 
-                const container = document.getElementById('updates-container');
+            allUpdates = [...news.map(item => ({...item, type: 'ニュース'})),
+                          ...events.map(item => ({...item, type: 'イベント'}))];
 
-                updates.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'card ' + (item.type === 'ニュース' ? 'news-card' : 'event-card');
-                    card.innerHTML = `
-                        <h3>${item.date} - ${item.title} <span class="type">[${item.type}]</span></h3>
-                        <p>${item.content}</p>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (error) {
-                console.error("最新情報一覧の読み込みに失敗しました:", error);
-            }
+            allUpdates.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            renderUpdates();
+            renderPagination();
+        } catch (error) {
+            console.error("最新情報一覧の読み込みに失敗しました:", error);
         }
+    }
 
-        loadAllUpdates();
-    </script>
-</body>
-</html>
+    function renderUpdates() {
+        const container = document.getElementById('updates-container');
+        container.innerHTML = '';
+
+        const filtered = currentFilter === 'all' ? allUpdates : allUpdates.filter(u => u.type === currentFilter);
+        const start = (currentPage - 1) * updatesPerPage;
+        const end = start + updatesPerPage;
+        const pageUpdates = filtered.slice(start, end);
+
+        pageUpdates.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card ' + (item.type === 'ニュース' ? 'news-card' : 'event-card');
+            card.innerHTML = `
+                <h3>${item.date} - ${item.title} <span class="type">[${item.type}]</span></h3>
+                <p>${item.content}</p>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function renderPagination() {
+        const container = document.getElementById('pagination');
+        container.innerHTML = '';
+
+        const filtered = currentFilter === 'all' ? allUpdates : allUpdates.filter(u => u.type === currentFilter);
+        const totalPages = Math.ceil(filtered.length / updatesPerPage);
+
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            if (i === currentPage) btn.disabled = true;
+            btn.addEventListener('click', () => {
+                currentPage = i;
+                renderUpdates();
+                renderPagination();
+            });
+            container.appendChild(btn);
+        }
+    }
+
+    // フィルタボタン
+    document.querySelectorAll('.filter button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentFilter = btn.getAttribute('data-type');
+            currentPage = 1;
+            renderUpdates();
+            renderPagination();
+        });
+    });
+
+    loadAllUpdates();
+</script>
