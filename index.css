@@ -12,6 +12,26 @@ body {
     background-color: #f7f7f7;
 }
 
+#branches {
+    text-align: center;
+    margin: 50px 0;
+}
+
+#branches .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #0072ce;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    margin-top: 15px;
+}
+
+#branches .btn:hover {
+    background-color: #005bb5;
+}
+
 header {
     background-color: #00468b;
     color: #fff;
