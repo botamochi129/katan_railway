@@ -148,6 +148,24 @@ footer nav ul li a:hover {
     text-decoration: underline;
 }
 
+.type {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: #0072ce;
+    margin-left: 5px;
+}
+
+.card h3 .type {
+    font-size: 0.8rem;
+}
+
+.card h3 .type:contains("イベント") {
+    background-color: #28a745; /* イベントは緑 */
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
     nav ul {
