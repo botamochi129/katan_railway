@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>勝炭鉄道 エリア選択</title>
+<link rel="stylesheet" href="index.css">
+</head>
+<body>
+<div id="header-container"></div>
+
+<main>
+    <h2>エリアを選択してください</h2>
+    <div class="branch-container">
+        <div class="branch-card">
+            <h3>勝炭本部</h3>
+            <p>勝炭本部路線・駅情報はこちら</p>
+            <a href="katan/stations/index.html" class="btn">勝炭本部へ</a>
+        </div>
+
+        <div class="branch-card">
+            <h3>深宮支部</h3>
+            <p>深宮支部路線・駅情報はこちら</p>
+            <a href="fukamiya/stations/index.html" class="btn">深宮支部へ</a>
+        </div>
+
+        <div class="branch-card">
+            <h3>川前支部</h3>
+            <p>川前支部路線・駅情報はこちら</p>
+            <a href="kawasaki/stations/index.html" class="btn">川前支部へ</a>
+        </div>
+    </div>
+</main>
+
+<div id="footer-container"></div>
+
+<script>
+    // ヘッダー・フッター読み込み
+    fetch('header.html').then(r => r.text()).then(t => document.getElementById('header-container').innerHTML = t);
+    fetch('footer.html').then(r => r.text()).then(t => document.getElementById('footer-container').innerHTML = t);
+</script>
+</body>
+</html>
