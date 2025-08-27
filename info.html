@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勝炭鉄道 最新情報一覧</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="logo.png" alt="勝炭鉄道株式会社">
+        </div>
+        <nav>
+            <ul>
+                <li><a href="index.html">トップページ</a></li>
+                <li><a href="#updates">最新情報</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="updates">
+            <h2>最新情報一覧</h2>
+            <div class="info-cards" id="updates-container">
+                <!-- JSONからすべてのニュース・イベントを挿入 -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 勝炭鉄道株式会社</p>
+    </footer>
+
+    <script>
+        async function loadAllUpdates() {
+            try {
+                const [newsRes, eventsRes] = await Promise.all([
+                    fetch('data/news.json'),
+                    fetch('data/events.json')
+                ]);
+                const news = await newsRes.json();
+                const events = await eventsRes.json();
+
+                const updates = [...news.map(item => ({...item, type: 'ニュース'})),
+                                 ...events.map(item => ({...item, type: 'イベント'}))];
+
+                updates.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                const container = document.getElementById('updates-container');
+
+                updates.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'card ' + (item.type === 'ニュース' ? 'news-card' : 'event-card');
+                    card.innerHTML = `
+                        <h3>${item.date} - ${item.title} <span class="type">[${item.type}]</span></h3>
+                        <p>${item.content}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error("最新情報一覧の読み込みに失敗しました:", error);
+            }
+        }
+
+        loadAllUpdates();
+    </script>
+</body>
+</html>
