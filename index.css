@@ -34,6 +34,25 @@ nav ul li {
     margin: 0 15px;
 }
 
+.station-list {
+    list-style: none;
+    padding: 0;
+}
+
+.station-list li {
+    margin: 10px 0;
+}
+
+.station-list li a {
+    text-decoration: none;
+    color: #00468b;
+    font-weight: bold;
+}
+
+.station-list li a:hover {
+    text-decoration: underline;
+}
+
 nav ul li a {
     color: #fff;
     text-decoration: none;
