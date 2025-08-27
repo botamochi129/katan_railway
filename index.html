@@ -1,73 +1,69 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>勝炭鉄道 | 公式サイト</title>
-<link rel="stylesheet" href="index.css" />
-<link rel="icon" type="image/png" href="image/KR_rogo.png" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="勝炭鉄道の公式ウェブサイト。沿線の魅力や運行情報をご案内します。">
+    <title>勝炭鉄道株式会社</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="favicon.ico">
 </head>
 <body>
-  <div id="header-placeholder"></div>
+    <header>
+        <div class="logo">
+            <img src="logo.png" alt="勝炭鉄道株式会社">
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#about">会社概要</a></li>
+                <li><a href="#service">運行情報</a></li>
+                <li><a href="#events">沿線イベント</a></li>
+                <li><a href="#recruit">採用情報</a></li>
+                <li><a href="#contact">お問い合わせ</a></li>
+            </ul>
+        </nav>
+    </header>
 
-  <main>
-    <!-- 各ページ固有のコンテンツ -->
-    <section id="news">
-      <h2>最近のお知らせ</h2>
-      <ul id="latest-news"></ul>
-      <p><a href="info.html">お知らせ一覧へ</a></p>
-    </section>
-    <!-- ほかのセクションはページによって異なります -->
-  </main>
+    <main>
+        <section id="hero">
+            <h1>勝炭鉄道へようこそ</h1>
+            <p>未来をつなぐ、地域を育む。</p>
+        </section>
 
-  <div id="footer-placeholder"></div>
+        <section id="about">
+            <h2>会社概要</h2>
+            <p>勝炭鉄道株式会社は、東京都の秋葉原と茨城県のつくばを結ぶ「つくばエクスプレス」を運行しています。沿線の1都3県11市区と民間企業等の出資により設立された第三セクターの鉄道会社です。</p>
+        </section>
 
-  <script>
-    async function loadTemplate(id, url) {
-      try {
-        const response = await fetch(url);
-        const text = await response.text();
-        document.getElementById(id).innerHTML = text;
-      } catch (e) {
-        console.error(`Failed to load ${url}:`, e);
-      }
-    }
+        <section id="service">
+            <h2>運行情報</h2>
+            <p>運行状況や時刻表、運賃情報など、最新の運行情報をご案内します。</p>
+        </section>
 
-    // ヘッダー・フッターを読み込み
-    loadTemplate('header-placeholder', 'header.html').then(() => {
-      const navToggle = document.getElementById('nav-toggle');
-      const navMenu = document.getElementById('nav-menu');
-      if (navToggle && navMenu) {
-        navToggle.addEventListener('click', () => {
-          navMenu.classList.toggle('open');
-        });
-      }
-    });
-    loadTemplate('footer-placeholder', 'footer.html');
+        <section id="events">
+            <h2>沿線イベント</h2>
+            <p>地域との連携を深めるため、さまざまなイベントを開催しています。詳細はイベントページをご覧ください。</p>
+        </section>
 
-    // index.html用：最新のお知らせをinfo.htmlから取得して表示
-    async function loadLatestNews() {
-      try {
-        const response = await fetch('info.html');
-        const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
-        const newsItems = doc.querySelectorAll('#news-list li');
-        const latestNews = Array.from(newsItems).slice(0, 5);
-        const ul = document.getElementById('latest-news');
-        ul.innerHTML = '';
-        latestNews.forEach(item => {
-          const li = document.createElement('li');
-          li.textContent = item.textContent;
-          ul.appendChild(li);
-        });
-      } catch (e) {
-        console.error('お知らせの読み込みに失敗しました:', e);
-      }
-    }
-    if(document.getElementById('latest-news')) {
-      loadLatestNews();
-    }
-  </script>
+        <section id="recruit">
+            <h2>採用情報</h2>
+            <p>勝炭鉄道では、共に未来を創る仲間を募集しています。詳細は採用ページをご覧ください。</p>
+        </section>
+
+        <section id="contact">
+            <h2>お問い合わせ</h2>
+            <p>ご質問やご意見がございましたら、お気軽にお問い合わせください。</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 勝炭鉄道株式会社</p>
+        <nav>
+            <ul>
+                <li><a href="#privacy">プライバシーポリシー</a></li>
+                <li><a href="#terms">利用規約</a></li>
+            </ul>
+        </nav>
+    </footer>
 </body>
 </html>
