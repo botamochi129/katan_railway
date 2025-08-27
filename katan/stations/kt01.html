@@ -1,30 +1,61 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KT01 戸六駅 | 勝炭鉄道</title>
-    <link rel="stylesheet" href="../../index.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KT01 勝炭駅 | 勝炭鉄道</title>
+<link rel="stylesheet" href="../../index.css">
 </head>
 <body>
-    <div id="header-container"></div>
+<div id="header-container"></div>
 
-    <main>
-        <h2>KT01 戸六駅</h2>
-        <p>所在地：岩木県戸六市</p>
-        <p>乗り換え可能路線：戸六空港モノレール線・赤砂高原鉄道線</p>
-        <p>駅施設：改札、自動券売機</p>
-        <h3>時刻表</h3>
-        <p>平日・休日別の列車時刻を表示（後で JSON 連携可能）</p>
-        <h3>周辺情報</h3>
-        <p>駅周辺の観光・商業施設案内</p>
-    </main>
+<main>
+    <h2 id="station-name">KT01 勝炭駅</h2>
+    <p>所在地：東京都〇〇区〇〇町</p>
+    <p>駅施設：改札、トイレ、自動券売機、コインロッカー</p>
 
-    <div id="footer-container"></div>
+    <h3>時刻表</h3>
+    <div id="timetable"></div>
 
-    <script>
-        fetch('../../header.html').then(r => r.text()).then(t => document.getElementById('header-container').innerHTML = t);
-        fetch('../../footer.html').then(r => r.text()).then(t => document.getElementById('footer-container').innerHTML = t);
-    </script>
+    <h3>周辺情報</h3>
+    <p>駅周辺の観光・商業施設案内</p>
+</main>
+
+<div id="footer-container"></div>
+
+<script>
+    // ヘッダー・フッター読み込み
+    fetch('../../header.html').then(r => r.text()).then(t => document.getElementById('header-container').innerHTML = t);
+    fetch('../../footer.html').then(r => r.text()).then(t => document.getElementById('footer-container').innerHTML = t);
+
+    // 時刻表読み込み
+    fetch('../../data/stations/kt01.json')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('station-name').textContent = data.station;
+
+            const container = document.getElementById('timetable');
+
+            data.lines.forEach(line => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'line-timetable';
+
+                const title = document.createElement('h4');
+                title.textContent = line.line + " - " + line.direction;
+                lineDiv.appendChild(title);
+
+                const ul = document.createElement('ul');
+                line.times.forEach(time => {
+                    const li = document.createElement('li');
+                    li.textContent = time;
+                    ul.appendChild(li);
+                });
+                lineDiv.appendChild(ul);
+
+                container.appendChild(lineDiv);
+            });
+        })
+        .catch(error => console.error("時刻表の読み込みに失敗しました:", error));
+</script>
 </body>
 </html>
