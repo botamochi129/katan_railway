@@ -43,22 +43,10 @@
             </div>
         </section>
 
-        <!-- 最新運行情報カード -->
-        <section id="service">
+       <section id="service">
             <h2>運行情報</h2>
-            <div class="info-cards">
-                <div class="card">
-                    <h3>8/27 09:00</h3>
-                    <p>快速列車が遅延しています。お急ぎの方は各駅でのご案内をご確認ください。</p>
-                </div>
-                <div class="card">
-                    <h3>8/27 07:30</h3>
-                    <p>全線通常運行中です。</p>
-                </div>
-                <div class="card">
-                    <h3>8/26 18:00</h3>
-                    <p>台風接近に伴い、終日運休の可能性があります。最新情報をご確認ください。</p>
-                </div>
+            <div class="info-cards" id="news-container">
+                <!-- JSONから読み込んだニュースがここに挿入されます -->
             </div>
         </section>
 
@@ -108,6 +96,29 @@
             currentSlide = (currentSlide + 1) % slides.length;
             showSlide(currentSlide);
         }, 5000);
+
+        // ニュースJSONを読み込み、カード生成
+        async function loadNews() {
+            try {
+                const response = await fetch('data/news.json');
+                const news = await response.json();
+                const container = document.getElementById('news-container');
+    
+                news.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <h3>${item.date} - ${item.title}</h3>
+                        <p>${item.content}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error("ニュースの読み込みに失敗しました:", error);
+            }
+        }
+    
+        loadNews();
     </script>
 </body>
 </html>
