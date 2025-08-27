@@ -46,7 +46,10 @@
         <section id="updates">
             <h2>最新情報</h2>
             <div class="info-cards" id="updates-container">
-                <!-- JSONから読み込んだニュース・イベントがここに挿入されます -->
+                <!-- JSONから読み込んだ最新5件がここに挿入されます -->
+            </div>
+            <div class="view-all">
+                <a href="info.html">すべて見る &raquo;</a>
             </div>
         </section>
 
@@ -93,38 +96,36 @@
         }, 5000);
 
         async function loadUpdates() {
-        try {
-            // ニュース・イベントを同時に取得
-            const [newsRes, eventsRes] = await Promise.all([
-                fetch('data/news.json'),
-                fetch('data/events.json')
-            ]);
-            const news = await newsRes.json();
-            const events = await eventsRes.json();
-
-            // 両方を統合
-            const updates = [...news.map(item => ({...item, type: 'ニュース'})),
-                             ...events.map(item => ({...item, type: 'イベント'}))];
-
-            // 日付順にソート（降順）
-            updates.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            const container = document.getElementById('updates-container');
-            updates.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <h3>${item.date} - ${item.title} <span class="type">[${item.type}]</span></h3>
-                    <p>${item.content}</p>
-                `;
-                container.appendChild(card);
-            });
-        } catch (error) {
-            console.error("最新情報の読み込みに失敗しました:", error);
+            try {
+                const [newsRes, eventsRes] = await Promise.all([
+                    fetch('data/news.json'),
+                    fetch('data/events.json')
+                ]);
+                const news = await newsRes.json();
+                const events = await eventsRes.json();
+    
+                const updates = [...news.map(item => ({...item, type: 'ニュース'})),
+                                 ...events.map(item => ({...item, type: 'イベント'}))];
+    
+                updates.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+                const container = document.getElementById('updates-container');
+    
+                updates.slice(0, 5).forEach(item => { // 最新5件だけ表示
+                    const card = document.createElement('div');
+                    card.className = 'card ' + (item.type === 'ニュース' ? 'news-card' : 'event-card');
+                    card.innerHTML = `
+                        <h3>${item.date} - ${item.title} <span class="type">[${item.type}]</span></h3>
+                        <p>${item.content}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error("最新情報の読み込みに失敗しました:", error);
+            }
         }
-    }
-
-    loadUpdates();
+    
+        loadUpdates();
     </script>
 </body>
 </html>
