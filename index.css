@@ -18,6 +18,31 @@ header {
     padding: 20px 0;
 }
 
+.line-timetable {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+}
+
+.line-timetable h4 {
+    margin-bottom: 8px;
+    color: #00468b;
+}
+
+.line-timetable ul {
+    list-style: none;
+    padding-left: 0;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.line-timetable ul li {
+    margin-right: 12px;
+    margin-bottom: 4px;
+}
+
 header .logo img {
     height: 50px;
     margin-left: 20px;
