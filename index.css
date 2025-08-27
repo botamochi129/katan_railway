@@ -13,7 +13,7 @@ body {
 }
 
 header {
-    background-color: #00468b; /* 鉄道会社風ブルー */
+    background-color: #00468b;
     color: #fff;
     padding: 20px 0;
 }
@@ -58,30 +58,69 @@ section {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-section#hero {
-    background-color: #0072ce;
-    color: #fff;
-    text-align: center;
-    padding: 80px 20px;
-    border-radius: 10px;
-    margin-bottom: 60px;
-}
-
-section#hero h1 {
-    font-size: 2.5rem;
-    margin-bottom: 20px;
-}
-
-section#hero p {
-    font-size: 1.2rem;
-}
-
 section h2 {
     font-size: 1.8rem;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     color: #00468b;
 }
 
+/* スライダー */
+#hero {
+    position: relative;
+    height: 400px;
+    margin-bottom: 60px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.slider .slide {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+.slider .slide.active {
+    opacity: 1;
+}
+
+.slider img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.slider .caption {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    color: #fff;
+    font-size: 1.5rem;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
+}
+
+/* 運行情報カード */
+.info-cards {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.card {
+    background-color: #e9f0ff;
+    padding: 20px;
+    border-radius: 8px;
+    flex: 1 1 300px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+    color: #00468b;
+    margin-bottom: 10px;
+}
+
+/* フッター */
 footer {
     background-color: #00468b;
     color: #fff;
@@ -120,7 +159,17 @@ footer nav ul li a:hover {
         margin: 10px 0;
     }
 
-    section#hero {
-        padding: 60px 20px;
+    .info-cards {
+        flex-direction: column;
+    }
+
+    #hero {
+        height: 250px;
+    }
+
+    .slider .caption {
+        font-size: 1.2rem;
+        bottom: 15px;
+        left: 15px;
     }
 }
