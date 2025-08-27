@@ -9,20 +9,8 @@
     <link rel="icon" href="favicon.ico">
 </head>
 <body>
-    <header>
-        <div class="logo">
-            <img src="image/KR_rogo.png" alt="勝炭鉄道株式会社">
-        </div>
-        <nav>
-            <ul>
-                <li><a href="#about">会社概要</a></li>
-                <li><a href="#service">運行情報</a></li>
-                <li><a href="#events">沿線イベント</a></li>
-                <li><a href="#recruit">採用情報</a></li>
-                <li><a href="#contact">お問い合わせ</a></li>
-            </ul>
-        </nav>
-    </header>
+    <!-- 共通ヘッダーを挿入 -->
+    <div id="header-container"></div>
 
     <main>
         <!-- スライダー -->
@@ -69,18 +57,25 @@
         </section>
     </main>
 
-    <footer>
-        <p>&copy; 2025 勝炭鉄道株式会社</p>
-        <nav>
-            <ul>
-                <li><a href="#privacy">プライバシーポリシー</a></li>
-                <li><a href="#terms">利用規約</a></li>
-            </ul>
-        </nav>
-    </footer>
+    <!-- 共通フッターを挿入 -->
+    <div id="footer-container"></div>
 
     <!-- スライダー用スクリプト -->
     <script>
+        // ヘッダー読み込み
+        fetch('header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header-container').innerHTML = data;
+            });
+
+        // フッター読み込み
+        fetch('footer.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('footer-container').innerHTML = data;
+            });
+        
         let currentSlide = 0;
         const slides = document.querySelectorAll(".slide");
 
