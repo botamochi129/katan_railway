@@ -70,5 +70,23 @@
     "name": "真我駅",
     "prev": "sk11",
     "next": null
+  },
+  {
+    "id": "skt02",
+    "name": "西十刈駅",
+    "prev": "sk09",
+    "next": "skt03"
+  },
+  {
+    "id": "skt03",
+    "name": "松ノ丸駅",
+    "prev": "skt02",
+    "next": "skt04"
+  },
+  {
+    "id": "skt04",
+    "name": "徳城駅",
+    "prev": "skt03",
+    "next": null
   }
 ]
