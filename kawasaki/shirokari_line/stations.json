@@ -1,0 +1,74 @@
+[
+  {
+    "id": "sk01",
+    "name": "新城駅",
+    "prev": null,
+    "next": "sk02"
+    },
+  {
+    "id": "sk02",
+    "name": "勝鉄輪橋駅",
+    "prev": "sk01",
+    "next": "sk03"
+  },
+  {
+    "id": "sk03",
+    "name": "勝鉄船橋駅",
+    "prev": "sk02",
+    "next": "sk04"
+  },
+  {
+    "id": "sk04",
+    "name": "勝鉄新習志野駅",
+    "prev": "sk03",
+    "next": "sk05"
+  },
+  {
+    "id": "sk05",
+    "name": "勝鉄南昌駅",
+    "prev": "sk04",
+    "next": "sk06"
+  },
+  {
+    "id": "sk06",
+    "name": "南陽台駅",
+    "prev": "sk05",
+    "next": "sk07"
+  },
+  {
+    "id": "sk07",
+    "name": "北仲町駅",
+    "prev": "sk06",
+    "next": "sk08"
+  },
+  {
+    "id": "sk08",
+    "name": "仲町駅",
+    "prev": "sk07",
+    "next": "sk09"
+  },
+  {
+    "id": "sk09",
+    "name": "十刈駅",
+    "prev": "sk08",
+    "next": "sk10"
+  },
+  {
+    "id": "sk10",
+    "name": "浦瀬駅",
+    "prev": "sk09",
+    "next": "sk11"
+  },
+  {
+    "id": "sk11",
+    "name": "根区橋駅",
+    "prev": "sk10",
+    "next": "sk12"
+  },
+  {
+    "id": "sk12",
+    "name": "真我駅",
+    "prev": "sk11",
+    "next": null
+  }
+]
