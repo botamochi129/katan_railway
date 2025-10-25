@@ -9,7 +9,6 @@
     <link rel="icon" href="favicon.ico">
 </head>
 <body>
-    <!-- 共通ヘッダーを挿入 -->
     <div id="header-container"></div>
 
     <main>
@@ -37,7 +36,7 @@
                 <!-- JSONから読み込んだ最新5件がここに挿入されます -->
             </div>
             <div class="view-all">
-                <a href="info.html">すべて見る &raquo;</a>
+                <a href="info.html" class="btn">すべて見る</a>
             </div>
         </section>
 
@@ -63,7 +62,7 @@
 
         <section id="about">
             <h2>会社概要</h2>
-            <p>勝炭鉄道株式会社は、勝炭県に本社を構え、深宮県(深宮鯖)と川前府(MJaS)に支部を置く架空の鉄道会社です。</p>
+            <p>勝炭鉄道株式会社は、勝炭県に本社を構え、深宮県（深宮鯖）と川前府（MJaS）に支部を置く架空の鉄道会社です。</p>
         </section>
 
         <section id="recruit">
@@ -71,98 +70,42 @@
             <p>勝炭鉄道では、共に未来を創る仲間を募集しています。詳細は採用ページをご覧ください。</p>
         </section>
 
+        <section id="announce">
+            <h2>放送について</h2>
+            <p>
+                当社の車内・駅構内放送の音声は、<a href="https://vidweb.co.jp/" target="_blank" rel="noopener noreferrer">動画制作会社VIDWEB</a> が提供する音声合成サービス「ボイスゲート」を利用しています。<br>
+                クリアで自然な音声を用い、快適な放送環境づくりに努めております。
+            </p>
+        </section>
+
         <section id="contact">
             <h2>お問い合わせ</h2>
             <p>ご質問やご意見がございましたら、お気軽にお問い合わせください。</p>
         </section>
-
-        <section id="announce">
-            <h2>放送について</h2>
-            <p>放送では、音声は(動画制作会社VIDWEB)[https://vidweb.co.jp/]のボイスゲートを利用しています</p>
-        </section>
     </main>
 
-    <!-- 共通フッターを挿入 -->
     <div id="footer-container"></div>
 
-    <!-- スライダー用スクリプト -->
     <script>
-        // ヘッダー読み込み
         fetch('header.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('header-container').innerHTML = data;
-            });
+            .then(r => r.text())
+            .then(t => document.getElementById('header-container').innerHTML = t);
 
-        // フッター読み込み
         fetch('footer.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('footer-container').innerHTML = data;
-            });
-        
-        let currentSlide = 0;
-        const slides = document.querySelectorAll(".slide");
+            .then(r => r.text())
+            .then(t => document.getElementById('footer-container').innerHTML = t);
 
-        function showSlide(index) {
-            slides.forEach((slide, i) => {
-                slide.classList.toggle("active", i === index);
-            });
+        const slides = document.querySelectorAll(".slide");
+        let currentSlide = 0;
+
+        function showSlide(i) {
+            slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
         }
 
         setInterval(() => {
             currentSlide = (currentSlide + 1) % slides.length;
             showSlide(currentSlide);
         }, 5000);
-
-        async function loadUpdates() {
-            try {
-                const [newsRes, eventsRes] = await Promise.all([
-                    fetch('data/news.json'),
-                    fetch('data/events.json')
-                ]);
-                const news = await newsRes.json();
-                const events = await eventsRes.json();
-    
-                const updates = [...news.map(item => ({...item, type: 'ニュース'})),
-                                 ...events.map(item => ({...item, type: 'イベント'}))];
-    
-                updates.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-                const container = document.getElementById('updates-container');
-    
-                updates.slice(0, 5).forEach(item => { // 最新5件だけ表示
-                    const card = document.createElement('div');
-                    card.className = 'card ' + (item.type === 'ニュース' ? 'news-card' : 'event-card');
-                    card.innerHTML = `
-                        <h3>${item.date} - ${item.title} <span class="type">[${item.type}]</span></h3>
-                        <p>${item.content}</p>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (error) {
-                console.error("最新情報の読み込みに失敗しました:", error);
-            }
-        }
-    
-        loadUpdates();
-
-        const branchCards = document.querySelectorAll('.branch-card');
-        
-        branchCards.forEach(card => {
-            const newsFile = card.dataset.news;
-            fetch(`data/news_${newsFile}.json`)
-                .then(res => res.json())
-                .then(news => {
-                    const ul = card.querySelector('.branch-news');
-                    news.slice(0, 3).forEach(item => {  // 最新3件表示
-                        const li = document.createElement('li');
-                        li.textContent = `${item.date} - ${item.title}`;
-                        ul.appendChild(li);
-                    });
-                });
-        });
-
     </script>
 </body>
 </html>
