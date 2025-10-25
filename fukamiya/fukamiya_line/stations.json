@@ -1,0 +1,32 @@
+[
+  {
+    "id": "fm01",
+    "name": "勝鉄深宮駅",
+    "prev": null,
+    "next": "fm02"
+    },
+  {
+    "id": "fm02",
+    "name": "上寺駅",
+    "prev": "fm01",
+    "next": "fm03"
+  },
+  {
+    "id": "fm03",
+    "name": "新深宮駅",
+    "prev": "fm02",
+    "next": "fm04"
+  },
+  {
+    "id": "fm04",
+    "name": "南山滝駅",
+    "prev": "fm03",
+    "next": "fm05"
+  },
+  {
+    "id": "fm05",
+    "name": "山滝駅",
+    "prev": "fm04",
+    "next": null
+  }
+]
