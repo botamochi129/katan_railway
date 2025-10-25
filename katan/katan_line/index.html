@@ -2,15 +2,45 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>勝炭線</title>
-  <link rel="stylesheet" href="../style.css">
-  <script>
-    async function loadInclude(selector, url) {
-      const res = await fetch(url);
-      const html = await res.text();
-      document.querySelector(selector).innerHTML = html;
-    }
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="勝炭線の路線紹介ページです。沿線の駅情報や運行情報をご案内します。">
+  <title>勝炭線 | 勝炭鉄道</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="icon" href="../favicon.ico">
+</head>
+<body>
+  <!-- ヘッダー読み込み -->
+  <div id="header-container"></div>
 
+  <main>
+    <h1>勝炭線</h1>
+    <p>勝炭線の路線説明などをここに書きます。</p>
+
+    <!-- 駅一覧 -->
+    <section id="stations">
+      <h2>駅一覧</h2>
+      <ul id="station-list"></ul>
+    </section>
+
+    <!-- 駅情報 -->
+    <section id="station-info-section">
+      <h2>駅情報</h2>
+      <div id="station-info"></div>
+    </section>
+
+    <p><a class="btn" href="../index.html">支部トップに戻る</a></p>
+  </main>
+
+  <!-- フッター読み込み -->
+  <div id="footer-container"></div>
+
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // ヘッダー・フッター読み込み
+    fetch('../header.html').then(r => r.text()).then(t => document.getElementById('header-container').innerHTML = t);
+    fetch('../footer.html').then(r => r.text()).then(t => document.getElementById('footer-container').innerHTML = t);
+
+    // 駅情報のJSON読み込み
     async function loadStations() {
       const res = await fetch('stations.json');
       const stations = await res.json();
@@ -26,15 +56,11 @@
       }
 
       document.getElementById('station-info').innerHTML = `
-        <h2>${station.name}</h2>
+        <h3>${station.name}</h3>
         <p>ID: ${station.id}</p>
         <p>
-          前の駅: ${
-            station.prev ? `<a href="?id=${station.prev}">${stations.find(s => s.id === station.prev).name}</a>` : 'なし'
-          }<br>
-          次の駅: ${
-            station.next ? `<a href="?id=${station.next}">${stations.find(s => s.id === station.next).name}</a>` : 'なし'
-          }
+          前の駅: ${station.prev ? `<a href="?id=${station.prev}">${stations.find(s => s.id === station.prev).name}</a>` : 'なし'}<br>
+          次の駅: ${station.next ? `<a href="?id=${station.next}">${stations.find(s => s.id === station.next).name}</a>` : 'なし'}
         </p>
       `;
 
@@ -42,32 +68,8 @@
       listEl.innerHTML = stations.map(s => `<li><a href="?id=${s.id}">${s.name}</a></li>`).join('');
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      loadInclude('header', '../header.html');
-      loadInclude('footer', '../footer.html');
-      loadStations();
-    });
+    loadStations();
+  });
   </script>
-</head>
-<body>
-  <!-- ヘッダー -->
-  <header></header>
-
-  <!-- メイン -->
-  <main>
-    <h1>勝炭線</h1>
-    <p>勝炭線の路線説明などをここに書きます。</p>
-
-    <h3>駅一覧</h3>
-    <ul id="station-list"></ul>
-
-    <h3>駅情報</h3>
-    <div id="station-info"></div>
-
-    <p><a class="btn" href="../index.html">支部トップに戻る</a></p>
-  </main>
-
-  <!-- フッター -->
-  <footer></footer>
 </body>
 </html>
