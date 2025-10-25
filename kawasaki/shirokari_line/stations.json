@@ -51,7 +51,7 @@
     "id": "sk09",
     "name": "十刈駅",
     "prev": "sk08",
-    "next": "sk10"
+    "next": ["sk10", "skt02"]
   },
   {
     "id": "sk10",
