@@ -3,13 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <title>勝炭支部ページ</title>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // ヘッダーとフッターを読み込む
+    async function loadInclude(selector, url) {
+      const res = await fetch(url);
+      const html = await res.text();
+      document.querySelector(selector).innerHTML = html;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadInclude('header', 'header.html');
+      loadInclude('footer', 'footer.html');
+    });
+  </script>
 </head>
 <body>
-  <h1>勝炭支部</h1>
-  <p>勝炭支部の路線紹介です。</p>
-  <ul>
-    <li><a href="katan_line/index.html">勝炭線</a></li>
-  </ul>
-  <p><a href="/katan_railway/index.html">トップに戻る</a></p>
+  <!-- ヘッダー読み込み -->
+  <header></header>
+
+  <!-- メイン -->
+  <main>
+    <h1>勝炭支部</h1>
+    <p>勝炭支部の路線紹介です。</p>
+    <ul class="branch-container">
+      <li class="branch-card"><a href="katan_line/index.html">勝炭線</a></li>
+    </ul>
+    <p><a class="btn" href="/katan_railway/index.html">トップに戻る</a></p>
+  </main>
+
+  <!-- フッター読み込み -->
+  <footer></footer>
 </body>
 </html>
