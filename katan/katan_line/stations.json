@@ -1,0 +1,26 @@
+[
+  {
+    "id": "kt01",
+    "name": "戸六駅",
+    "prev": null,
+    "next": "kt02",
+    "image": "images/kt01.png",
+    "description": "勝炭駅は勝炭線の起点駅です。",
+    "timetable": {
+      "weekday": ["6:00", "6:30", "7:00"],
+      "weekend": ["6:15", "6:45", "7:15"]
+    }
+  },
+  {
+    "id": "kt02",
+    "name": "さくら山駅",
+    "prev": "kt01",
+    "next": "kt03",
+    "image": "images/kt02.png",
+    "description": "中勝駅は住宅地にある駅です。",
+    "timetable": {
+      "weekday": ["6:05", "6:35", "7:05"],
+      "weekend": ["6:20", "6:50", "7:20"]
+    }
+  }
+]
