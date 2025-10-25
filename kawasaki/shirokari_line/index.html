@@ -65,29 +65,15 @@
       // prev処理
       let prevHTML = 'なし';
       if (station.prev) {
-        if (Array.isArray(station.prev)) {
-          prevHTML = station.prev.map(id => {
-            const s = stations.find(st => st.id === id);
-            return s ? `<a href="?id=${id}">${s.name}</a>` : '';
-          }).join(' / ');
-        } else {
-          const s = stations.find(st => st.id === station.prev);
-          prevHTML = s ? `<a href="?id=${station.prev}">${s.name}</a>` : 'なし';
-        }
+        const s = stations.find(st => st.id === station.prev);
+        prevHTML = s ? `<a href="?id=${station.prev}">${s.name}</a>` : 'なし';
       }
 
       // next処理
       let nextHTML = 'なし';
       if (station.next) {
-        if (Array.isArray(station.next)) {
-          nextHTML = station.next.map(id => {
-            const s = stations.find(st => st.id === id);
-            return s ? `<a href="?id=${id}">${s.name}</a>` : '';
-          }).join(' / ');
-        } else {
-          const s = stations.find(st => st.id === station.next);
-          nextHTML = s ? `<a href="?id=${station.next}">${s.name}</a>` : 'なし';
-        }
+        const s = stations.find(st => st.id === station.next);
+        nextHTML = s ? `<a href="?id=${station.next}">${s.name}</a>` : 'なし';
       }
 
       // 駅情報表示
