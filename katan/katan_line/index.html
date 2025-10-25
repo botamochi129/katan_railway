@@ -1,41 +1,28 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>勝炭線</title>
-</head>
-<body>
-<h1 id="station-name">駅名</h1>
-<p id="station-info">駅情報</p>
-
-<h2>駅一覧</h2>
-<ul id="station-list"></ul>
+<!-- katan_line/index.html 例 -->
+<h1 id="station-name"></h1>
+<div>
+  <a id="prev-station" href="#">前の駅</a> |
+  <a id="next-station" href="#">次の駅</a>
+</div>
 
 <script>
 fetch('stations.json')
   .then(res => res.json())
   .then(stations => {
-    // 駅一覧を表示
-    const list = document.getElementById('station-list');
-    stations.forEach(st => {
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = `katan_line?id=${st.id}`; // URLパラメータで駅を指定
-      a.textContent = st.name;
-      li.appendChild(a);
-      list.appendChild(li);
-    });
-
-    // URLパラメータ ?id= から駅IDを取得
     const params = new URLSearchParams(window.location.search);
-    const stationId = params.get('id') || stations[0].id; // 指定がなければ最初の駅
-    const st = stations.find(s => s.id === stationId);
-    if (st) {
-      document.getElementById('station-name').textContent = st.name;
-      document.getElementById('station-info').textContent =
-        `前の駅: ${st.prev || 'なし'}, 次の駅: ${st.next || 'なし'}`;
-    }
+    const id = params.get('id') || stations[0].id;
+    const station = stations.find(s => s.id === id);
+    if (!station) return;
+
+    document.getElementById('station-name').textContent = station.name;
+
+    const prevLink = document.getElementById('prev-station');
+    const nextLink = document.getElementById('next-station');
+
+    if(station.prev) prevLink.href = `katan_line?id=${station.prev}`;
+    else prevLink.style.display = 'none';
+
+    if(station.next) nextLink.href = `katan_line?id=${station.next}`;
+    else nextLink.style.display = 'none';
   });
 </script>
-</body>
-</html>
