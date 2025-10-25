@@ -1,28 +1,57 @@
-<!-- katan_line/index.html 例 -->
-<h1 id="station-name"></h1>
-<div>
-  <a id="prev-station" href="#">前の駅</a> |
-  <a id="next-station" href="#">次の駅</a>
-</div>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>勝炭線</title>
+  <script>
+    async function loadStations() {
+      const res = await fetch('stations.json');
+      const stations = await res.json();
 
-<script>
-fetch('stations.json')
-  .then(res => res.json())
-  .then(stations => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id') || stations[0].id;
-    const station = stations.find(s => s.id === id);
-    if (!station) return;
+      // URLのパラメータから駅IDを取得
+      const params = new URLSearchParams(window.location.search);
+      const stationId = params.get('id') || stations[0].id; // デフォルトは最初の駅
 
-    document.getElementById('station-name').textContent = station.name;
+      // 選ばれた駅を取得
+      const station = stations.find(s => s.id === stationId);
 
-    const prevLink = document.getElementById('prev-station');
-    const nextLink = document.getElementById('next-station');
+      if (!station) {
+        document.getElementById('station-info').innerHTML = '<p>駅が見つかりません</p>';
+        return;
+      }
 
-    if(station.prev) prevLink.href = `katan_line?id=${station.prev}`;
-    else prevLink.style.display = 'none';
+      // 駅情報表示
+      document.getElementById('station-info').innerHTML = `
+        <h2>${station.name}</h2>
+        <p>ID: ${station.id}</p>
+        <p>
+          前の駅: ${
+            station.prev ? `<a href="?id=${station.prev}">${stations.find(s => s.id === station.prev).name}</a>` : 'なし'
+          }<br>
+          次の駅: ${
+            station.next ? `<a href="?id=${station.next}">${stations.find(s => s.id === station.next).name}</a>` : 'なし'
+          }
+        </p>
+      `;
 
-    if(station.next) nextLink.href = `katan_line?id=${station.next}`;
-    else nextLink.style.display = 'none';
-  });
-</script>
+      // 駅一覧リンク
+      const listEl = document.getElementById('station-list');
+      listEl.innerHTML = stations.map(s => `<li><a href="?id=${s.id}">${s.name}</a></li>`).join('');
+    }
+
+    window.addEventListener('DOMContentLoaded', loadStations);
+  </script>
+</head>
+<body>
+  <h1>勝炭線</h1>
+  <p>勝炭線の路線説明などをここに書きます。</p>
+
+  <h3>駅一覧</h3>
+  <ul id="station-list"></ul>
+
+  <h3>駅情報</h3>
+  <div id="station-info"></div>
+
+  <p><a href="../index.html">支部トップに戻る</a></p>
+</body>
+</html>
