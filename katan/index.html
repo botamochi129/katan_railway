@@ -1,28 +1,6 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>勝炭支部ページ</title>
-  <link rel="stylesheet" href="style.css">
-  <script>
-    // ヘッダーとフッターを読み込む
-    async function loadInclude(selector, url) {
-      const res = await fetch(url);
-      const html = await res.text();
-      document.querySelector(selector).innerHTML = html;
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadInclude('header', 'header.html');
-      loadInclude('footer', 'footer.html');
-    });
-  </script>
-</head>
 <body>
-  <!-- ヘッダー読み込み -->
-  <header></header>
+  <div id="header-container"></div>
 
-  <!-- メイン -->
   <main>
     <h1>勝炭支部</h1>
     <p>勝炭支部の路線紹介です。</p>
@@ -32,7 +10,12 @@
     <p><a class="btn" href="/katan_railway/index.html">トップに戻る</a></p>
   </main>
 
-  <!-- フッター読み込み -->
-  <footer></footer>
+  <div id="footer-container"></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      fetch('../header.html').then(r => r.text()).then(t => document.getElementById('header-container').innerHTML = t);
+      fetch('../footer.html').then(r => r.text()).then(t => document.getElementById('footer-container').innerHTML = t);
+    });
+  </script>
 </body>
-</html>
