@@ -62,14 +62,39 @@
         return;
       }
 
+      // prev処理
+      let prevHTML = 'なし';
+      if (station.prev) {
+        if (Array.isArray(station.prev)) {
+          prevHTML = station.prev.map(id => {
+            const s = stations.find(st => st.id === id);
+            return s ? `<a href="?id=${id}">${s.name}</a>` : '';
+          }).join(' / ');
+        } else {
+          const s = stations.find(st => st.id === station.prev);
+          prevHTML = s ? `<a href="?id=${station.prev}">${s.name}</a>` : 'なし';
+        }
+      }
+
+      // next処理
+      let nextHTML = 'なし';
+      if (station.next) {
+        if (Array.isArray(station.next)) {
+          nextHTML = station.next.map(id => {
+            const s = stations.find(st => st.id === id);
+            return s ? `<a href="?id=${id}">${s.name}</a>` : '';
+          }).join(' / ');
+        } else {
+          const s = stations.find(st => st.id === station.next);
+          nextHTML = s ? `<a href="?id=${station.next}">${s.name}</a>` : 'なし';
+        }
+      }
+
       // 駅情報表示
       document.getElementById('station-info').innerHTML = `
         <h3>${station.name}</h3>
         <p>ID: ${station.id}</p>
-        <p>
-          前の駅: ${station.prev ? `<a href="?id=${station.prev}">${stations.find(s => s.id === station.prev).name}</a>` : 'なし'}<br>
-          次の駅: ${station.next ? `<a href="?id=${station.next}">${stations.find(s => s.id === station.next).name}</a>` : 'なし'}
-        </p>
+        <p>前の駅: ${prevHTML}<br>次の駅: ${nextHTML}</p>
       `;
 
       // 駅一覧リンク
