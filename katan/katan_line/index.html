@@ -3,16 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <title>勝炭線</title>
+  <link rel="stylesheet" href="../style.css">
   <script>
+    async function loadInclude(selector, url) {
+      const res = await fetch(url);
+      const html = await res.text();
+      document.querySelector(selector).innerHTML = html;
+    }
+
     async function loadStations() {
       const res = await fetch('stations.json');
       const stations = await res.json();
 
-      // URLのパラメータから駅IDを取得
       const params = new URLSearchParams(window.location.search);
-      const stationId = params.get('id') || stations[0].id; // デフォルトは最初の駅
+      const stationId = params.get('id') || stations[0].id;
 
-      // 選ばれた駅を取得
       const station = stations.find(s => s.id === stationId);
 
       if (!station) {
@@ -20,7 +25,6 @@
         return;
       }
 
-      // 駅情報表示
       document.getElementById('station-info').innerHTML = `
         <h2>${station.name}</h2>
         <p>ID: ${station.id}</p>
@@ -34,24 +38,36 @@
         </p>
       `;
 
-      // 駅一覧リンク
       const listEl = document.getElementById('station-list');
       listEl.innerHTML = stations.map(s => `<li><a href="?id=${s.id}">${s.name}</a></li>`).join('');
     }
 
-    window.addEventListener('DOMContentLoaded', loadStations);
+    window.addEventListener('DOMContentLoaded', () => {
+      loadInclude('header', '../header.html');
+      loadInclude('footer', '../footer.html');
+      loadStations();
+    });
   </script>
 </head>
 <body>
-  <h1>勝炭線</h1>
-  <p>勝炭線の路線説明などをここに書きます。</p>
+  <!-- ヘッダー -->
+  <header></header>
 
-  <h3>駅一覧</h3>
-  <ul id="station-list"></ul>
+  <!-- メイン -->
+  <main>
+    <h1>勝炭線</h1>
+    <p>勝炭線の路線説明などをここに書きます。</p>
 
-  <h3>駅情報</h3>
-  <div id="station-info"></div>
+    <h3>駅一覧</h3>
+    <ul id="station-list"></ul>
 
-  <p><a href="../index.html">支部トップに戻る</a></p>
+    <h3>駅情報</h3>
+    <div id="station-info"></div>
+
+    <p><a class="btn" href="../index.html">支部トップに戻る</a></p>
+  </main>
+
+  <!-- フッター -->
+  <footer></footer>
 </body>
 </html>
