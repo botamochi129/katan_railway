@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="勝炭鉄道の公式ウェブサイト。沿線の魅力や運行情報をご案内します。">
+    <meta property="og:title" content="勝炭鉄道株式会社 公式サイト">
+    <meta property="og:description" content="勝炭鉄道は地域の未来を支える架空の鉄道会社です。">
+    <meta property="og:image" content="image/ogp.jpg">
+    <meta property="og:type" content="website">
     <title>勝炭鉄道株式会社</title>
     <link rel="stylesheet" href="index.css">
     <link rel="icon" href="favicon.ico">
@@ -12,7 +16,7 @@
     <div id="header-container"></div>
 
     <main>
-        <!-- スライダー -->
+        <!-- メインビジュアル -->
         <section id="hero">
             <div class="slider">
                 <div class="slide active">
@@ -30,16 +34,25 @@
             </div>
         </section>
 
+        <!-- 最新情報 -->
         <section id="updates">
             <h2>最新情報</h2>
             <div class="info-cards" id="updates-container">
-                <!-- JSONから読み込んだ最新5件がここに挿入されます -->
+                <div class="card">
+                    <span class="date">2025年10月25日</span>
+                    <p>新しい駅構内放送を導入しました。</p>
+                </div>
+                <div class="card">
+                    <span class="date">2025年10月10日</span>
+                    <p>勝炭線のダイヤを一部改正しました。</p>
+                </div>
             </div>
             <div class="view-all">
                 <a href="info.html" class="btn">すべて見る</a>
             </div>
         </section>
 
+        <!-- 支部案内 -->
         <section id="branches">
             <h2>沿線・支部案内</h2>
             <div class="branch-container">
@@ -47,12 +60,10 @@
                     <img src="image/katan_map.png" alt="勝炭本部">
                     <span>勝炭本部</span>
                 </a>
-        
                 <a href="fukamiya/stations/index.html" class="branch-card">
                     <img src="image/fukamiya_map.png" alt="深宮支部">
                     <span>深宮支部</span>
                 </a>
-        
                 <a href="kawasaki/stations/index.html" class="branch-card">
                     <img src="image/kawasaki_map.png" alt="川前支部">
                     <span>川前支部</span>
@@ -60,16 +71,19 @@
             </div>
         </section>
 
+        <!-- 会社概要 -->
         <section id="about">
             <h2>会社概要</h2>
-            <p>勝炭鉄道株式会社は、勝炭県に本社を構え、深宮県（深宮鯖）と川前府（MJaS）に支部を置く架空の鉄道会社です。</p>
+            <p>勝炭鉄道株式会社は、勝炭県に本社を構え、深宮県（深宮鯖）と川前府（MJaS）に支部を置く架空の鉄道会社です。地域に密着した運行を通じ、安心・安全・快適な移動を提供しています。</p>
         </section>
 
+        <!-- 採用情報 -->
         <section id="recruit">
             <h2>採用情報</h2>
             <p>勝炭鉄道では、共に未来を創る仲間を募集しています。詳細は採用ページをご覧ください。</p>
         </section>
 
+        <!-- 放送について -->
         <section id="announce">
             <h2>放送について</h2>
             <p>
@@ -78,6 +92,7 @@
             </p>
         </section>
 
+        <!-- お問い合わせ -->
         <section id="contact">
             <h2>お問い合わせ</h2>
             <p>ご質問やご意見がございましたら、お気軽にお問い合わせください。</p>
@@ -87,25 +102,24 @@
     <div id="footer-container"></div>
 
     <script>
-        fetch('header.html')
-            .then(r => r.text())
-            .then(t => document.getElementById('header-container').innerHTML = t);
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('header.html')
+                .then(r => r.text())
+                .then(t => document.getElementById('header-container').innerHTML = t);
 
-        fetch('footer.html')
-            .then(r => r.text())
-            .then(t => document.getElementById('footer-container').innerHTML = t);
+            fetch('footer.html')
+                .then(r => r.text())
+                .then(t => document.getElementById('footer-container').innerHTML = t);
 
-        const slides = document.querySelectorAll(".slide");
-        let currentSlide = 0;
+            const slides = document.querySelectorAll(".slide");
+            let currentSlide = 0;
 
-        function showSlide(i) {
-            slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
-        }
-
-        setInterval(() => {
-            currentSlide = (currentSlide + 1) % slides.length;
-            showSlide(currentSlide);
-        }, 5000);
+            setInterval(() => {
+                slides[currentSlide].classList.remove("active");
+                currentSlide = (currentSlide + 1) % slides.length;
+                slides[currentSlide].classList.add("active");
+            }, 5000);
+        });
     </script>
 </body>
 </html>
