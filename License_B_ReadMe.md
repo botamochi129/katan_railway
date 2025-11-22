@@ -32,3 +32,40 @@ https://discord.gg/AJ5FZBuTHS
 ## お借りしたもの
 https://ame-trec.github.io/ame-trec2.0/posts/mtr/kiyakutenpure/
 とくやま様の利用規約テンプレートを元に作成しました。ありがとうございます。
+
+
+# Katan Railway MTR/RTM Pack Terms of Use B (Real-world Vehicles, etc.)
+
+## Introduction
+1. The author assumes no responsibility whatsoever for any damages incurred through the use of this resource pack.
+2. Modification refers to users altering the resource pack in any way for use or redistribution.
+3. Refrain from claiming ownership. When modifying or sharing, always credit the original author in the readme or similar documentation.
+4. Refrain from taking screenshots that recreate accidents.
+5. Downloading this resource pack constitutes acceptance of these terms.
+## Redistribution and Related Matters
+1. Redistributing modified versions publicly... Requires permission from the author (botamochi129). Obtain permission from the author via the “Contact” section below.
+2. Redistributing unmodified versions publicly... Prohibited. Always use the version I distribute.
+3. Redistribution solely within a server... Permission from the author (Botomochi) is required regardless of modification. Please obtain permission from the author via the “Contact” section below.
+5. Redistributing discontinued resource packs... Permitted, but copyright remains with the author.
+6. Selling redistributed resource packs... Prohibited.
+## Regarding Modifications and Porting to Other Media
+1. Modifying... Permission is not required for personal use (not transferred to others). If exceeding personal use, refer to the “Regarding Redistribution, etc.” section above.
+2. Porting to other media... Refer to the “Regarding Redistribution, etc.” section above. Porting to other media constitutes “modification”.
+3. Extracting parts from the resource pack models for use... Requires permission from the author (Botomochi). Please obtain permission from the author via the “Contact” section below. Once permission is granted, clearly state in the pack's ReadMe file or similar that this pack was used.
+## Regarding SNS Posts and Similar
+1. Introducing it on SNS (X, etc.) or videos (YouTube, etc.)... Permitted. In fact, we'd be delighted if you introduced it.
+2. Creating derivative works (e.g., illustrations, acrylic keychains, etc.)... Requires permission from the creator (botbmochi129). Please obtain permission from the creator via the “Contact” section below.
+3. Selling derivative works... Requires permission from the creator (botamochi129). Please obtain permission from the creator via the “Contact” section below.
+4. Registering on external sites like information aggregation sites... Requires permission from the creator (botomochi129). Please obtain permission from the creator via the “Contact” section below.
+5. Taking unrealistic screenshots and posting them on SNS... Permitted, but we may request removal if problematic. Please stay within the bounds of common sense.
+## Other
+1. Critical opinions regarding resource packs... Please refrain, as they can lower motivation for pack creation.
+2. Requests regarding resource packs... Requests are accepted on the Discord server below, but we likely won't be able to fulfill them.
+## Contact
+https://discord.gg/AJ5FZBuTHS
+This is the official Katan Railway server. Support is handled here.
+If you need permission from the creator, please ask within this server or DM the creator (botamochi129).
+## Credits
+https://ame-trec.github.io/ame-trec2.0/posts/mtr/kiyakutenpure/
+Created based on Tokuyama's Terms of Use template. Thank you.
+Translated with DeepL.com (free version)
