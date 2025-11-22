@@ -43,7 +43,7 @@ https://ame-trec.github.io/ame-trec2.0/posts/mtr/kiyakutenpure/
 5. Downloading this resource pack constitutes acceptance of these terms.
 ## Redistribution and Related Matters
 1. Redistributing modified versions publicly... Permitted.
-2. Redistributing unmodified versions publicly... Requires permission from the author (botomochi129). Please request permission via the “Contact” section below.
+2. Redistributing unmodified versions publicly... Requires permission from the author (botamochi129). Please request permission via the “Contact” section below.
 3. Redistribution solely within a server... Permitted.
 5. Redistribution of discontinued resource packs... Permitted, but copyright remains with the author.
 6. Selling redistributed resource packs... Permitted if modified. Monetization via Modrinth, etc., is also permitted, but warnings may be issued if issues arise.
@@ -54,8 +54,8 @@ https://ame-trec.github.io/ame-trec2.0/posts/mtr/kiyakutenpure/
 ## Regarding SNS Posts and Similar
 1. Introducing it on SNS (X, etc.) or videos (YouTube, etc.)... Permitted. In fact, we'd be delighted if you introduced it.
 2. Creating derivative works (e.g., illustrations, acrylic keychains, etc.)... Permitted.
-3. Selling derivative works... Requires permission from the author (botomochi129). Please request permission from the author via the “Contact” section below.
-4. Registering on external sites like information aggregation sites... Requires permission from the author (Botomochi). Please request permission from the author via the “Contact” section below.
+3. Selling derivative works... Requires permission from the author (botamochi129). Please request permission from the author via the “Contact” section below.
+4. Registering on external sites like information aggregation sites... Requires permission from the author (botamochi129). Please request permission from the author via the “Contact” section below.
 5. Taking unrealistic screenshots and posting them on SNS... Permitted, but we may request removal if problematic. Please exercise common sense.
 ## Other
 1. Critical opinions regarding resource packs... Please refrain, as they can lower motivation for pack creation.
