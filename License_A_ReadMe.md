@@ -8,8 +8,8 @@
 5. リソースパックをダウンロードした時点で、この規約に同意したとみなします。
 ## 再配布などについて
 1. 改造して公の場で再配布する…可能です。
-2. 改造なしで公の場で再配布する…作者(ぼたもち)の許可が必要です。下の「問い合わせ」項目から作者に許可を取ってください。
-3. サーバー内でのみ再配布する…可能です。
+2. 改造なしで公の場で再配布する…禁止です。
+3. サーバー内でのみ再配布する…改造なしの場合、作者(ぼたもち)の許可が必要です。下の「問い合わせ」項目から作者に許可を取ってください。
 5. 配布終了したリソースパックを再配布する…可能ですが、著作権は作者に帰属します。
 6. 再配布したリソースパックを販売する…改造がされていれば可能です。Modrinth等での収益化も可能ですが、もし問題がある場合は注意を行う場合があります。
 ## 改造や他媒体への移植について
@@ -43,8 +43,8 @@ https://ame-trec.github.io/ame-trec2.0/posts/mtr/kiyakutenpure/
 5. Downloading this resource pack constitutes acceptance of these terms.
 ## Redistribution and Related Matters
 1. Redistributing modified versions publicly... Permitted.
-2. Redistributing unmodified versions publicly... Requires permission from the author (botamochi129). Please request permission via the “Contact” section below.
-3. Redistribution solely within a server... Permitted.
+2. Redistributing unmodified versions publicly... Prohibited.
+3. Redistribution solely within a server... Without modifications, Requires permission from the author (botamochi129). Please request permission from the author via the “Contact” section below.
 5. Redistribution of discontinued resource packs... Permitted, but copyright remains with the author.
 6. Selling redistributed resource packs... Permitted if modified. Monetization via Modrinth, etc., is also permitted, but warnings may be issued if issues arise.
 ## Modification and Porting to Other Media
