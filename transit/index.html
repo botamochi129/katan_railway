@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>勝炭鉄道 Transit Viewer</title>
+<link rel="icon" href="data:,">
 <style>
 :root{--bg:#0b1120;--panel:#151c2c;--line:#2a3452;--ink:#e2e8f0;--muted:#94a3b8;--accent:#0ea5e9;--glow:rgba(14,165,233,.2)}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -67,7 +68,7 @@ const TRAIN_ICON="/assets/kr3000.png";
 const state={raw:null,routes:[],selected:0,visibleTrains:[],stationMap:{}};
 const $=id=>document.getElementById(id);
 
-// ========== ぴぬ鉄道ロジック（データ解析） ==========
+// ========== データ解析チェーン（ぴぬ鉄道準拠） ==========
 function escapeHtml(str){return String(str??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function fetchJsonCompat(url){return fetch(url,{cache:"no-store",mode:"cors"}).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
 function colorFromNumber(n,f="#94a3b8"){if(typeof n!=="number"||!Number.isFinite(n))return f;return "#"+(n>>>0).toString(16).padStart(6,"0").slice(-6)}
@@ -91,7 +92,6 @@ function discoverStationMap(root){
   function extractName(obj){if(!obj||typeof obj!=="object")return"";for(const k of["name","stationName","displayName","title","text","nameJa","nameJp","name_ja","name_jp","ja","jp","en"])if(obj[k])return normalizeNameText(obj[k]);if(Array.isArray(obj.names))return normalizeNameText(obj.names);if(obj.nameMap)return normalizeNameText(obj.nameMap.ja||obj.nameMap.jp||obj.nameMap.en||Object.values(obj.nameMap)[0]);return""}
   function walk(obj,parentKey=""){if(obj==null||typeof obj!=="object"||seen.has(obj))return;seen.add(obj);if(Array.isArray(obj)){obj.forEach(v=>walk(v,parentKey));return}const own=extractName(obj);if(own){if(obj.id)put(obj.id,own);if(obj.stationId)put(obj.stationId,own);if(obj.platformId)put(obj.platformId,own);if(parentKey)put(parentKey,own)}for(const [k,v] of Object.entries(obj)){if((k==="stations"||k==="platforms"||k==="positions")&&v&&typeof v==="object"&&!Array.isArray(v)){for(const [id,val]of Object.entries(v)){if(typeof val==="string"){if(!/^-?\d+(\.\d+)?[, ]+-?\d+/.test(val))put(id,val)}else if(val&&typeof val==="object"){const n=extractName(val);if(n)put(id,n)}}}walk(v,k)}}walk(root);return map}
 
-// 路線統合＋サービスマージロジック
 function parseRoutes(root){
   const grouped={},seen=new WeakSet();
   function addRoute(r){
@@ -99,14 +99,9 @@ function parseRoutes(root){
     const baseName=cleanRouteDisplayName(r.name);if(!baseName)return;
     const service=getService(`${r.name||""} ${r.number||""}`);
     const lineColor=colorFromNumber(r.color,"#94a3b8");
-    
-    if(!grouped[baseName]){
-      grouped[baseName]={name:baseName,routeColor:lineColor,stations:[...r.stations],durations:r.durations||[],services:{},rawRoutes:[]};
-    }
+    if(!grouped[baseName])grouped[baseName]={name:baseName,routeColor:lineColor,stations:[...r.stations],durations:r.durations||[],services:{},rawRoutes:[]};
     grouped[baseName].rawRoutes.push(r);
     if(grouped[baseName].routeColor==="#94a3b8"&&lineColor!=="#94a3b8")grouped[baseName].routeColor=lineColor;
-    
-    // 統合：同じ物理駅列ならサービスに追加、駅列が長いもので基準を更新
     if(r.stations.length>grouped[baseName].stations.length){
       grouped[baseName].stations=[...r.stations];
       grouped[baseName].durations=r.durations||[];
@@ -120,17 +115,23 @@ function parseRoutes(root){
   return Object.values(grouped).sort((a,b)=>a.name.localeCompare(b.name,"ja"));
 }
 
-function stationCandidates(id){const s=String(id||""),out=[s];s.split(/[_|,;:/]/).forEach(x=>{if(x)out.push(x)});const nums=s.match(/-?\d{5,}/g);if(nums)out.push(...nums);return[...new Set(out)]}
+function stationCandidates(id){
+  const s=String(id||""),out=[s];
+  // ✅ 正規表現のスラッシュをエスケープ修正
+  s.split(/[_|,;:\/]/).forEach(x=>{if(x)out.push(x)});
+  const nums=s.match(/-?\d{5,}/g);
+  if(nums)out.push(...nums);
+  return[...new Set(out)];
+}
 function stationRawName(id,index){const cands=stationCandidates(id);for(const c of cands)if(state.stationMap[c])return state.stationMap[c];const keys=Object.keys(state.stationMap);for(const c of cands){const hit=keys.find(k=>k&&(c.includes(k)||k.includes(c)));if(hit)return state.stationMap[hit]}return`駅${index+1}`}
 function stationObj(id,index){return parseStationName(stationRawName(id,index))}
 function stationJa(id,index){return stationObj(id,index).ja}
 
-// ========== Arrivals + Durations による正確な位置推定 ==========
+// ========== Arrivals + Durations 位置推定 ==========
 function matchServiceToArrival(route, arr){
   for(const svc of Object.values(route.services)){
     if(svc.service.includes(arr.name)||arr.name.includes(svc.service))return svc;
   }
-  // フォールバック: 先頭サービス
   return Object.values(route.services)[0]||null;
 }
 
@@ -142,19 +143,15 @@ function calcPositionFromArrivals(route, arrivals, now){
     const svc=matchServiceToArrival(route,arr);
     if(!svc||!svc.durations?.length)return;
     
-    // 監視駅インデックス（簡易的に駅列の中央付近を基準に）
     const monitorIdx=Math.floor(svc.stations.length/2);
     const arrivalTime=Number(arr.arrival);
     
-    // 累積走行時間を構築（監視駅基準）
     const cumTime=new Array(svc.stations.length).fill(0);
     for(let i=monitorIdx;i<svc.durations.length;i++)cumTime[i+1]=cumTime[i]+svc.durations[i];
     for(let i=monitorIdx-1;i>=0;i--)cumTime[i]=cumTime[i+1]-svc.durations[i];
     
-    // 各駅の予測到着時刻
     const expected=svc.stations.map((_,i)=>arrivalTime+cumTime[i]-cumTime[monitorIdx]);
     
-    // 現在の位置を線形補間
     let pos=-1,status="範囲外",fromIdx=0,toIdx=0,progress=0;
     for(let i=0;i<svc.durations.length;i++){
       if(now>=expected[i]&&now<expected[i+1]){
@@ -171,7 +168,6 @@ function calcPositionFromArrivals(route, arrivals, now){
       else{pos=svc.stations.length-1;fromIdx=svc.stations.length-2;toIdx=svc.stations.length-1;status="終点通過";}
     }
     
-    // 方向判定（左=上り(インデックス減少方向), 右=下り(インデックス増加方向)）
     const isUp=expected[0]>expected[expected.length-1]?(now<arrivalTime):(now>arrivalTime);
     const side=isUp?"left":"right";
     const dest=side==="left"?stationJa(svc.stations[0],0):stationJa(svc.stations[svc.stations.length-1],svc.stations.length-1);
@@ -200,10 +196,9 @@ async function renderMap(){
   if(!state.routes.length){svg.setAttribute("viewBox","0 0 1540 900");svg.style.minHeight="900px";svg.innerHTML='<text x="770" y="300" text-anchor="middle" fill="var(--muted)" font-size="24">データを読み込み中...</text>';return}
   const route=state.routes[state.selected];if(!route){svg.setAttribute("viewBox","0 0 1540 900");svg.style.minHeight="900px";svg.innerHTML='<text x="770" y="300" text-anchor="middle" fill="var(--muted)" font-size="24">路線を選択してください</text>';return}
   
-  // Arrivals取得
   const monitorId=route.stations[Math.floor(route.stations.length/2)];
   let arrivals=[];
-  try{const res=await fetch(`/api/arrivals?stationId=${monitorId}&worldIndex=0`,{cache:"no-store"});if(res.ok)arrivals=await res.json();}catch(e){console.warn("Arrivals fetch skipped")}
+  try{const res=await fetch(`/api/arrivals?stationId=${encodeURIComponent(monitorId)}&worldIndex=0`,{cache:"no-store"});if(res.ok)arrivals=await res.json();}catch(e){console.warn("Arrivals fetch skipped",e)}
   
   state.visibleTrains=calcPositionFromArrivals(route,arrivals,Date.now());
   
@@ -228,22 +223,16 @@ function renderDetails(){
 
 window.showTrainDetail=function(idx){
   const t=state.visibleTrains[idx];if(!t)return;
-  const {route,service,side,pos,fromIdx,toIdx,status,progress,dest}=t;
+  const {route,service,side,pos,fromIdx,toIdx,status,dest}=t;
   const sideText=side==="left"?"上り":"下り";
-  const fromName=stationJa(route.stations[fromIdx],fromIdx);
-  const toName=stationJa(route.stations[toIdx],toIdx);
   
   let html=`<h2>${escapeHtml(service)} → ${escapeHtml(dest)} 行</h2><div class="small">${escapeHtml(route.name)} / ${sideText} / ${status}</div><div class="legend"><span class="badge" style="background:${getServiceColor(service,route.name)}">${escapeHtml(service)}</span></div><div style="margin-top:18px">`;
   
-  // 停車駅リスト構築（通過駅も時間に応じて状態変化）
   route.stations.forEach((st,i)=>{
     const s=stationObj(st,i);
     let cls="pass",label="通過済";
-    const expectedTime=route.stations.length>1?Date.now()+(i-pos)*((pos>0?route.durations[Math.floor(pos)]||60000:60000):(60000)):Date.now();
-    
     if(i===fromIdx&&status==="停車中"){cls="next";label="停車中";}
     else if(i===toIdx&&status==="走行中"){cls="between";label="次駅";}
-    else if(i>toIdx&&status==="走行中"){cls="";label=`${Math.round(progress*100)}%`;}
     
     const est=new Date();est.setMinutes(est.getMinutes()+(i-Math.floor(pos))*2);
     html+=`<div class="stop ${cls}"><div>${est.toTimeString().slice(0,5)}</div><div>${escapeHtml(s.ja)}${s.en?`<div class="en">${escapeHtml(s.en)}</div>`:""}</div><div>${label}</div></div>`;
