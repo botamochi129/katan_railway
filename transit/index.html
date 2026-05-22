@@ -8,9 +8,9 @@
 :root {
   --bg: #0a1128; --surface: #111a36; --surface-hover: #162244;
   --border: #1e2d54; --text: #e2e8f0; --text-muted: #94a3b8;
-  --accent: #00d4ff; --accent-glow: rgba(0, 212, 255, 0.25);
+  --accent: #00d4ff; --glow: rgba(0, 212, 255, 0.2);
   --font: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
-  --radius: 10px; --shadow: 0 4px 16px rgba(0,0,0,0.3);
+  --radius: 10px; --shadow: 0 4px 16px rgba(0,0,0,0.35);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
@@ -23,7 +23,7 @@ h1{font-size:18px;font-weight:700;letter-spacing:.5px}.ver{font-size:11px;color:
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
 .sidebar{height:calc(100vh-100px);overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
 .search{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:#0a0f24;color:var(--text);font-size:14px;outline:none}
-.search:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+.search:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--glow)}
 
 .route{display:flex;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:all .2s;border:1px solid transparent}
 .route:hover{background:var(--surface-hover);border-color:var(--border)}
@@ -42,8 +42,7 @@ svg{min-width:1200px;display:block}
 .station{fill:var(--surface);stroke:var(--accent);stroke-width:2.5}
 .slabel{font-size:13px;font-weight:600;fill:var(--text)}.sen{font-size:10px;fill:var(--text-muted)}.sno{font-size:9px;fill:var(--accent)}
 
-.train{cursor:pointer;transition:filter .2s}
-.train:hover{filter:brightness(1.25) drop-shadow(0 0 8px var(--accent-glow))}
+.train{cursor:pointer}
 .train-hit{cursor:pointer}
 .tboard{font-size:9px;font-weight:800;fill:#fff;pointer-events:none}
 .tdest{font-size:8px;fill:#cbd5e1;pointer-events:none}
@@ -62,7 +61,7 @@ svg{min-width:1200px;display:block}
 <body>
 <header>
   <div class="brand"><div class="logo">SC</div><h1>勝炭鉄道</h1></div>
-  <span class="ver">Transit Viewer v2.0</span>
+  <span class="ver">Transit Viewer v3.0</span>
 </header>
 <div class="layout">
   <aside class="sidebar card">
@@ -80,45 +79,60 @@ svg{min-width:1200px;display:block}
 </div>
 
 <script>
+// ========== 設定 ==========
 const CONFIG = {
   UPDATE_INTERVAL: 10000,
+  // 路線定義
   ROUTES: [
     { keys: ['条先周線'], name: '勝炭鉄道 条先周線', color: '#94a3b8' },
     { keys: ['樽尾線'], name: '樽尾線', color: '#3b82f6' },
     { keys: ['城刈線', '氷原線'], name: '城刈線・氷原線（直通）', color1: '#f59e0b', color2: '#8b5cf6', boundary: '新城|Shinjo||sk01_hw01_ps01_pt01_pk05_hc01' }
   ],
-  SERVICE_COLORS: {
-    '普通': '#94a3b8', '快速': '#ef4444', '区間快速': '#3b82f6',
-    '通勤快速': '#f59e0b', '新快速': '#22c55e', '急行': '#8b5cf6', '特急': '#a855f7', '各停': '#64748b'
-  }
+  // 種別/系列ごとのアイコン・色設定（画像URLに変更可）
+  SERIES: {
+    '快速特急': { color: '#c026d3', icon: '<rect x="-18" y="-10" width="36" height="18" rx="4" fill="#c026d3"/><circle cx="-10" cy="10" r="3" fill="#fff"/><circle cx="10" cy="10" r="3" fill="#fff"/>' },
+    '快速急行': { color: '#7e22ce', icon: '<rect x="-18" y="-10" width="36" height="18" rx="4" fill="#7e22ce"/><circle cx="-10" cy="10" r="3" fill="#fff"/><circle cx="10" cy="10" r="3" fill="#fff"/>' },
+    '通勤急行': { color: '#a21caf', icon: '<rect x="-18" y="-10" width="36" height="18" rx="4" fill="#a21caf"/><circle cx="-10" cy="10" r="3" fill="#fff"/><circle cx="10" cy="10" r="3" fill="#fff"/>' },
+    '新快速':   { color: '#16a34a', icon: '<rect x="-16" y="-8" width="32" height="14" rx="6" fill="#16a34a"/><circle cx="-8" cy="8" r="3" fill="#fff"/><circle cx="8" cy="8" r="3" fill="#fff"/>' },
+    '快速':     { color: '#ef4444', icon: '<rect x="-16" y="-8" width="32" height="14" rx="6" fill="#ef4444"/><circle cx="-8" cy="8" r="3" fill="#fff"/><circle cx="8" cy="8" r="3" fill="#fff"/>' },
+    '区間快速': { color: '#3b82f6', icon: '<rect x="-16" y="-8" width="32" height="14" rx="6" fill="#3b82f6"/><circle cx="-8" cy="8" r="3" fill="#fff"/><circle cx="8" cy="8" r="3" fill="#fff"/>' },
+    '通勤快速': { color: '#f59e0b', icon: '<rect x="-16" y="-8" width="32" height="14" rx="6" fill="#f59e0b"/><circle cx="-8" cy="8" r="3" fill="#fff"/><circle cx="8" cy="8" r="3" fill="#fff"/>' },
+    '準急':     { color: '#22c55e', icon: '<rect x="-14" y="-6" width="28" height="12" rx="5" fill="#22c55e"/><circle cx="-7" cy="8" r="2.5" fill="#fff"/><circle cx="7" cy="8" r="2.5" fill="#fff"/>' },
+    '急行':     { color: '#ef4444', icon: '<rect x="-14" y="-6" width="28" height="12" rx="5" fill="#ef4444"/><circle cx="-7" cy="8" r="2.5" fill="#fff"/><circle cx="7" cy="8" r="2.5" fill="#fff"/>' },
+    '普通':     { color: '#94a3b8', icon: '<rect x="-14" y="-6" width="28" height="12" rx="5" fill="#94a3b8"/><circle cx="-7" cy="8" r="2.5" fill="#fff"/><circle cx="7" cy="8" r="2.5" fill="#fff"/>' },
+    '各停':     { color: '#64748b', icon: '<rect x="-14" y="-6" width="28" height="12" rx="5" fill="#64748b"/><circle cx="-7" cy="8" r="2.5" fill="#fff"/><circle cx="7" cy="8" r="2.5" fill="#fff"/>' }
+  },
+  LOCAL_SERVICES: ['各駅停車', '各停', 'Local', '普通']
 };
 
-const state = { data: null, routes: [], selected: 0, trains: [], stationMap: {} };
+const state = { data: null, routes: [], selected: 0, visibleTrains: [], stationMap: {} };
 const $ = id => document.getElementById(id);
 
 // ユーティリティ
 const escape = s => String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const norm = v => v==null?'':(Array.isArray(v)?v.map(norm).filter(Boolean).join(' '):(typeof v==='object'?norm(v.name||v.ja||v.en||Object.values(v)[0]||''):String(v).replace(/\s+/g,' ').trim()));
-const getService = text => { for(const k of Object.keys(CONFIG.SERVICE_COLORS)) if((text||'').includes(k)) return k; return '普通'; };
-const getServiceColor = svc => CONFIG.SERVICE_COLORS[svc] || '#64748b';
-const shortSvc = svc => ({'快速特急':'快特','快速急行':'快急','通勤急行':'通急','通勤快速':'通快','区間快速':'区快','新快速':'新快','急行':'急','快速':'快','準急':'準','各停':'各','普通':'普'}[Object.keys(CONFIG.SERVICE_COLORS).find(k=>svc?.includes(k))||'']||'列');
+const getService = text => {
+  for(const k of Object.keys(CONFIG.SERIES)) if((text||'').includes(k)) return k;
+  return '普通';
+};
+const shortSvc = svc => ({'快速特急':'快特','快速急行':'快急','通勤急行':'通急','新快速':'新快','区間快速':'区快','通勤快速':'通快','急行':'急','快速':'快','準急':'準','各停':'各','普通':'普'}[svc]||'列');
 
 // 駅名解決（| || を改行として処理）
 function resolveStationName(id) {
   const raw = state.stationMap[id] || id;
-  if (!raw || raw === id) return { lines: ['不明駅'], id };
+  if (!raw || raw === id) return { lines: ['不明駅'] };
   const parts = String(raw).split('||');
   const lines = [];
-  parts.forEach(p => {
-    p.split('|').forEach(sub => sub.trim() && lines.push(sub.trim()));
-  });
-  return { lines: lines.length ? lines : ['不明駅'], id };
+  parts.forEach(p => p.split('|').forEach(sub => sub.trim() && lines.push(sub.trim())));
+  return { lines: lines.length ? lines : ['不明駅'] };
 }
 
+// 駅名マップ構築
 function buildStationMap(root) {
-  const map = {};
+  const map = {}, seen = new WeakSet();
   function walk(obj) {
-    if (!obj || typeof obj !== 'object') return;
+    if (!obj || typeof obj !== 'object' || seen.has(obj)) return;
+    seen.add(obj);
     if (Array.isArray(obj)) { obj.forEach(walk); return; }
     const name = norm(obj.name || obj.stationName || obj.ja || obj.en || obj.id || Object.values(obj)[0]);
     if (name && obj.id) map[String(obj.id).trim()] = name;
@@ -139,6 +153,7 @@ async function fetchData() {
   return await res.json();
 }
 
+// 路線解析
 function parseRoutes(data) {
   const results = [];
   function walk(obj) {
@@ -151,9 +166,9 @@ function parseRoutes(data) {
         const svc = getService(route.name);
         if (def.boundary) {
           const bIdx = route.stations.findIndex(s => String(s).includes('新城') || String(s).includes('sk01_hw01'));
-          results.push({ ...def, stations: route.stations, color: def.color1, boundaryIdx: bIdx >= 0 ? bIdx : route.stations.length/2, isThrough: true, name: def.name, service: svc });
+          results.push({ ...def, stations: route.stations, color: def.color1, boundaryIdx: bIdx >= 0 ? bIdx : Math.floor(route.stations.length/2), isThrough: true, name: def.name, service: svc, rawStations: route.stations });
         } else {
-          results.push({ ...def, stations: route.stations, color: def.color, name: def.name, service: svc });
+          results.push({ ...def, stations: route.stations, color: def.color, name: def.name, service: svc, rawStations: route.stations });
         }
       });
     }
@@ -165,22 +180,40 @@ function parseRoutes(data) {
   return Object.values(g).sort((a,b)=>a.name.localeCompare(b.name,'ja'));
 }
 
-function calcPosition(route, side) {
-  const stops = side==='left' ? route.stations : [...route.stations].reverse();
-  if(stops.length < 2) return { pos: 0, status: 'unknown', stops };
-  const dwell=18, run=52, seg=dwell+run, cycle=seg*(stops.length-1);
-  const t = ((Date.now()/1000) + (side==='right'?37:0)) % cycle;
-  const idx = Math.floor(t/seg), rem = t - idx*seg;
-  return { pos: rem < dwell ? idx : (idx + Math.min(idx+1, stops.length-1))/2, status: rem < dwell ? 'dwell' : 'running', from: idx, to: Math.min(idx+1, stops.length-1), stops };
+// ぴぬ鉄道準拠: サービス停車駅を路線インデックスにマッピング
+function serviceStopPositions(route, service) {
+  const raw = service.stations || route.stations;
+  return raw.map((st, i) => {
+    const target = String(st);
+    let idx = route.stations.findIndex(x => String(x) === target);
+    if (idx < 0) idx = route.stations.findIndex(x => String(x).includes(target) || target.includes(String(x)));
+    return idx >= 0 ? idx : Math.min(i, route.stations.length - 1);
+  });
 }
 
+// ぴぬ鉄道準拠: 時刻ベース推定位置計算
+function discreteTrainPosition(route, service, serviceIndex, side) {
+  const raw = serviceStopPositions(route, service);
+  const stops = side === 'left' ? raw : [...raw].reverse();
+  const ids = side === 'left' ? service.stations : [...service.stations].reverse();
+  const n = Math.max(stops.length, 2);
+  const dwell = 22, run = 70, segment = dwell + run, cycle = segment * (n - 1);
+  const seed = serviceIndex * 23 + (side === 'right' ? 41 : 0);
+  const t = ((Date.now() / 1000) + seed) % cycle;
+  const stopIdx = Math.floor(t / segment), rem = t - stopIdx * segment;
+  const from = stops[stopIdx], to = stops[Math.min(stopIdx + 1, n - 1)];
+  if (rem < dwell) return { pos: from, fromStopIndex: stopIdx, toStopIndex: Math.min(stopIdx + 1, n - 1), fromRouteIndex: from, toRouteIndex: to, status: '停車中', stopIds: ids };
+  return { pos: (from + to) / 2, fromStopIndex: stopIdx, toStopIndex: Math.min(stopIdx + 1, n - 1), fromRouteIndex: from, toRouteIndex: to, status: '走行中', stopIds: ids };
+}
+
+// 描画：路線リスト
 function renderRouteList() {
   const q = $('search').value.toLowerCase();
   const filtered = state.routes.filter(r => r.name.toLowerCase().includes(q) || r.service?.toLowerCase().includes(q));
   $('routeList').innerHTML = filtered.map((r,i) => {
     const idx = state.routes.indexOf(r);
     return `<div class="route ${state.selected===idx?'active':''}" data-i="${idx}">
-      <div class="swatch" style="background:${r.color||CONFIG.SERVICE_COLORS['普通']}"></div>
+      <div class="swatch" style="background:${r.color||'#94a3b8'}"></div>
       <div><div class="rname">${escape(r.name)}</div><div class="rmeta">${escape(r.service||'')}</div></div>
     </div>`;
   }).join('') || '<div style="padding:10px;color:var(--text-muted)">該当なし</div>';
@@ -189,6 +222,7 @@ function renderRouteList() {
   });
 }
 
+// 描画：路線図＆列車
 function renderMap() {
   const svg = $('svg'); svg.innerHTML = '';
   const route = state.routes[state.selected];
@@ -198,12 +232,12 @@ function renderMap() {
   svg.setAttribute('viewBox',`0 0 1200 ${h}`);
   svg.insertAdjacentHTML('beforeend', `<text x="20" y="45" font-size="20" font-weight="700">${escape(route.name)}</text>`);
   
-  // 路線ライン（直通対応）
+  // 路線ライン
   if(route.isThrough) {
     if(route.boundaryIdx > 0) svg.insertAdjacentHTML('beforeend', `<line x1="${cx}" y1="${startY}" x2="${cx}" y2="${startY+gap*route.boundaryIdx}" stroke="${route.color1}" stroke-width="6" stroke-linecap="round"/>`);
     if(route.boundaryIdx < route.stations.length-1) svg.insertAdjacentHTML('beforeend', `<line x1="${cx}" y1="${startY+gap*route.boundaryIdx}" x2="${cx}" y2="${bottom}" stroke="${route.color2}" stroke-width="6" stroke-linecap="round"/>`);
   } else {
-    svg.insertAdjacentHTML('beforeend', `<line x1="${cx}" y1="${startY}" x2="${cx}" y2="${bottom}" stroke="${route.color||CONFIG.SERVICE_COLORS['普通']}" stroke-width="6" stroke-linecap="round"/>`);
+    svg.insertAdjacentHTML('beforeend', `<line x1="${cx}" y1="${startY}" x2="${cx}" y2="${bottom}" stroke="${route.color||'#94a3b8'}" stroke-width="6" stroke-linecap="round"/>`);
   }
 
   // 駅描画
@@ -216,61 +250,64 @@ function renderMap() {
     svg.insertAdjacentHTML('beforeend', tx);
   });
 
-  // 列車描画（震え・クリック不能修正）
-  state.trains = [];
-  ['left','right'].forEach(side => {
-    const p = calcPosition(route, side);
-    const y = startY + gap * p.pos, xOff = side==='left' ? -95 : 95;
-    const svc = route.service, color = getServiceColor(svc);
-    const idx = state.trains.length;
-    const dest = resolveStationName(p.stops[p.stops.length-1]).lines[0];
-    state.trains.push({ route, service: svc, side, progress: p, dest });
+  // 列車描画（ぴぬ鉄道ロジック準拠）
+  state.visibleTrains = [];
+  const services = [{ service: route.service, stations: route.rawStations }]; // 簡易化
+  services.forEach((svc, svcIdx) => {
+    ['left','right'].forEach(side => {
+      const p = discreteTrainPosition(route, svc, svcIdx, side);
+      const y = startY + gap * p.pos, xOff = side==='left' ? -110 : 110;
+      const idx = state.visibleTrains.length;
+      const dest = resolveStationName(p.stopIds[p.stopIds.length-1]).lines[0];
+      state.visibleTrains.push({ route, service: route.service, side, progress: p, dest });
 
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', 'train');
-    g.setAttribute('transform', `translate(${cx+xOff},${y})`);
-    g.setAttribute('onclick', `showDetail(${idx})`);
-    
-    // ヒット領域拡大
-    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    hit.setAttribute('class','train-hit'); hit.setAttribute('x','-35'); hit.setAttribute('y','-25'); hit.setAttribute('width','70'); hit.setAttribute('height','50'); hit.setAttribute('fill','transparent');
-    g.appendChild(hit);
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('transform', `translate(${cx+xOff},${y})`);
+      
+      // ヒット領域（最背面に配置してクリック安定化）
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hit.setAttribute('class','train-hit'); hit.setAttribute('x','-40'); hit.setAttribute('y','-45'); hit.setAttribute('width','80'); hit.setAttribute('height','60'); hit.setAttribute('fill','transparent');
+      hit.setAttribute('onclick', `showDetail(${idx})`);
+      g.appendChild(hit);
 
-    // 種別バッジ
-    const badge = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    badge.setAttribute('class','tboard'); badge.setAttribute('x','-22'); badge.setAttribute('y','-38'); badge.setAttribute('width','44'); badge.setAttribute('height','16'); badge.setAttribute('rx','4'); badge.setAttribute('fill',color);
-    g.appendChild(badge);
-    const bText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    bText.setAttribute('class','tboard'); bText.setAttribute('x','0'); bText.setAttribute('y','-26'); bText.setAttribute('text-anchor','middle'); bText.textContent = shortSvc(svc);
-    g.appendChild(bText);
+      // 種別バッジ
+      const svcConfig = CONFIG.SERIES[route.service] || CONFIG.SERIES['普通'];
+      const badge = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      badge.setAttribute('class','tboard'); badge.setAttribute('x','-24'); badge.setAttribute('y','-42'); badge.setAttribute('width','48'); badge.setAttribute('height','16'); badge.setAttribute('rx','4'); badge.setAttribute('fill',svcConfig.color);
+      g.appendChild(badge);
+      const bText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      bText.setAttribute('class','tboard'); bText.setAttribute('x','0'); bText.setAttribute('y','-30'); bText.setAttribute('text-anchor','middle'); bText.textContent = shortSvc(route.service);
+      g.appendChild(bText);
 
-    // 行先テキスト
-    const dText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    dText.setAttribute('class','tdest'); dText.setAttribute('x','0'); dText.setAttribute('y','-46'); dText.setAttribute('text-anchor','middle'); dText.textContent = `→${escape(dest)}`;
-    g.appendChild(dText);
+      // 行先
+      const dText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      dText.setAttribute('class','tdest'); dText.setAttribute('x','0'); dText.setAttribute('y','-48'); dText.setAttribute('text-anchor','middle'); dText.textContent = `→${escape(dest)}`;
+      g.appendChild(dText);
 
-    // アイコン本体（簡易車両形状）
-    const body = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    body.setAttribute('x','-16'); body.setAttribute('y','-12'); body.setAttribute('width','32'); body.setAttribute('height','22'); body.setAttribute('rx','4'); body.setAttribute('fill','var(--surface)'); body.setAttribute('stroke',color); body.setAttribute('stroke-width','2');
-    g.appendChild(body);
-    const wheel1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); wheel1.setAttribute('cx','-10'); wheel1.setAttribute('cy','12'); wheel1.setAttribute('r','4'); wheel1.setAttribute('fill',color); g.appendChild(wheel1);
-    const wheel2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); wheel2.setAttribute('cx','10'); wheel2.setAttribute('cy','12'); wheel2.setAttribute('r','4'); wheel2.setAttribute('fill',color); g.appendChild(wheel2);
+      // アイコン本体
+      const iconGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      iconGroup.setAttribute('class','train');
+      iconGroup.setAttribute('pointer-events','none');
+      iconGroup.innerHTML = svcConfig.icon;
+      g.appendChild(iconGroup);
 
-    svg.appendChild(g);
+      svg.appendChild(g);
+    });
   });
 }
 
+// 描画：詳細パネル
 function renderDetails(idx=null) {
   const panel = $('details');
-  if(idx!=null && state.trains[idx]) {
-    const t = state.trains[idx], p = t.progress;
+  if(idx!=null && state.visibleTrains[idx]) {
+    const t = state.visibleTrains[idx], p = t.progress;
     panel.innerHTML = `<h2>${escape(t.service)} → ${escape(t.dest)}</h2>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${escape(t.route.name)} / ${t.side==='left'?'下り':'上り'} / ${p.status==='dwell'?'停車中':'走行中'}</div>
-      <div class="leg"><span class="badge" style="background:${getServiceColor(t.service)}">${escape(t.service)}</span></div>
-      <div class="notice">位置は時刻ベース推定 / 10秒間隔更新 / リアルタイム座標はMTR仕様上未公開</div>
-      <div style="margin-top:14px">${p.stops.map((st,i)=>{
-        const info=resolveStationName(st), cls=i<p.from?'psd':i===p.from&&p.status==='dwell'?'cur':i===p.to&&p.status==='running'?'nxt':'psd';
-        const tm = new Date(); tm.setMinutes(tm.getMinutes()+(i-p.from)*3);
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${escape(t.route.name)} / ${t.side==='left'?'下り':'上り'} / ${p.status==='停車中'?'停車中':'走行中'}</div>
+      <div class="leg"><span class="badge" style="background:${(CONFIG.SERIES[t.service]||CONFIG.SERIES['普通']).color}">${escape(t.service)}</span></div>
+      <div class="notice">位置は停車22秒/走行70秒ベースの推定表示。リアルタイム座標はMTR仕様上未公開。</div>
+      <div style="margin-top:14px">${p.stopIds.map((st,i)=>{
+        const info=resolveStationName(st), cls=i<p.fromStopIndex?'psd':i===p.fromStopIndex&&p.status==='停車中'?'cur':i===p.toStopIndex&&p.status==='走行中'?'nxt':'psd';
+        const tm = new Date(); tm.setMinutes(tm.getMinutes()+(i-p.fromStopIndex)*3);
         return `<div class="stop"><div class="st-time">${tm.toTimeString().slice(0,5)}</div>
           <div class="st-name">${info.lines.map(l=>`<div>${escape(l)}</div>`).join('')}</div>
           <div class="st-sts ${cls}">${cls==='psd'?'通過':cls==='cur'?'停車': '次駅'}</div></div>`;
@@ -278,7 +315,7 @@ function renderDetails(idx=null) {
   } else {
     const r = state.routes[state.selected];
     if(!r) { panel.innerHTML='<h2>🚃 列車詳細</h2><p>路線を選択してください</p>'; return; }
-    panel.innerHTML = `<h2>${escape(r.name)}</h2><div class="leg"><span class="badge" style="background:${getServiceColor(r.service||'普通')}">${escape(r.service||'普通')}</span></div>
+    panel.innerHTML = `<h2>${escape(r.name)}</h2><div class="leg"><span class="badge" style="background:${(CONFIG.SERIES[r.service]||CONFIG.SERIES['普通']).color}">${escape(r.service||'普通')}</span></div>
       <div class="notice">左:下り / 右:上り / 直通路線は新城駅で路線色切替</div>`;
   }
 }
