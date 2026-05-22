@@ -1,4 +1,3 @@
-// transit/api/arrivals.js
 export default async function handler(req, res) {
   // CORS ヘッダー設定
   res.setHeader('Access-Control-Allow-Origin', '*');
