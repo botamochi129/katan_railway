@@ -22,7 +22,7 @@ button,input{border:1px solid var(--line);border-radius:8px;background:#0d1324;c
 .route-item.active{background:var(--glow);border-color:var(--accent)}
 .swatch{width:40px;height:4px;border-radius:2px;margin-bottom:6px}
 .map-container{position:relative;overflow:auto;background:radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0) 0 0/32px 32px}
-svg{display:block;min-width:1000px}
+svg{display:block;min-width:1100px}
 .station-node{fill:var(--panel);stroke:var(--accent);stroke-width:3}
 .station-text{fill:var(--ink);font-size:14px;font-weight:600}
 .station-sub{fill:var(--muted);font-size:11px}
@@ -30,6 +30,7 @@ svg{display:block;min-width:1000px}
 .train-unit:hover{filter:brightness(1.3)}
 .train-label{font-size:10px;fill:#fff;font-weight:bold;text-anchor:middle}
 .train-img{pointer-events:none}
+.branch-label{fill:var(--muted);font-size:13px;font-weight:700;letter-spacing:1px}
 .details-panel{padding:16px;border-top:1px solid var(--line);background:var(--panel);max-height:300px;overflow-y:auto}
 #status{font-size:12px;margin-left:auto}
 .ok{color:#10b981}.err{color:#f43f5e}
@@ -37,7 +38,7 @@ svg{display:block;min-width:1000px}
 </head>
 <body>
 <header>
-  <div class="brand"><div class="logo">SC</div><div><h1>勝炭鉄道</h1><div class="sub">Durations Engine / Pinu-StationMap</div></div></div>
+  <div class="brand"><div class="logo">SC</div><div><h1>勝炭鉄道</h1><div class="sub">Multi-Track / 4-Lane Engine</div></div></div>
   <div id="status">システム待機中</div>
 </header>
 <div class="layout">
@@ -65,7 +66,9 @@ const CONFIG = {
     DATA_API: "/api/data",
     ARRIVALS_API: "/api/arrivals",
     INTERVAL: 10000,
-    KEYWORDS: ["条先周線", "樽尾線", "城刈線", "氷原線"]
+    KEYWORDS: ["条先周線", "樽尾線", "城刈線", "氷原線"],
+    BRANCH_SUFFIXES: ["支線", "線大", "線4", "線徳", "直通"],
+    LOCAL_SERVICES: ["普通", "Local", "各停", "各駅停車"]
 };
 
 let state = {
@@ -79,14 +82,15 @@ let state = {
 // ========== ユーティリティ ==========
 function escapeHtml(str){return String(str??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function colorFromNumber(n,f="#94a3b8"){if(typeof n!=="number"||!Number.isFinite(n))return f;return "#"+(n>>>0).toString(16).padStart(6,"0").slice(-6)}
-function normalizeNameText(v){if(v==null)return"";if(Array.isArray(v))return v.map(normalizeNameText).filter(Boolean).join(" ");if(typeof v==="object")return normalizeNameText(v.ja||v.jp||v.name||v.en||v[0]||Object.values(v)[0]||"");return String(v).replace(/\s+/g," ").trim()}
 function normalize(str) { return String(str || "").split('||')[0].split('|')[0].trim(); }
+function normalizeNameText(v){if(v==null)return"";if(Array.isArray(v))return v.map(normalizeNameText).filter(Boolean).join(" ");if(typeof v==="object")return normalizeNameText(v.ja||v.jp||v.name||v.en||v[0]||Object.values(v)[0]||"");return String(v).replace(/\s+/g," ").trim()}
+function isBranch(name){return CONFIG.BRANCH_SUFFIXES.some(s=>normalize(name).includes(s))}
 
 // ========== 駅名マップ構築（ぴぬ鉄道完全準拠） ==========
 function discoverStationMap(root){
   const map={},seen=new WeakSet();
   function put(id,name){id=String(id||"").trim();name=normalizeNameText(name);if(id&&name&&name.length<140)map[id]=name}
-  function extractName(obj){if(!obj||typeof obj!=="object")return"";for(const k of["name","stationName","displayName","title","text","nameJa","nameJp","ja","jp","en"])if(obj[k])return normalizeNameText(obj[k]);if(Array.isArray(obj.names))return normalizeNameText(obj.names);if(obj.nameMap)return normalizeNameText(obj.nameMap.ja||obj.nameMap.jp||obj.nameMap.en||Object.values(obj.nameMap)[0]);return""}
+  function extractName(obj){if(!obj||typeof obj!=="object")return"";for(const k of["name","stationName","displayName","title","text","nameJa","nameJp","name_ja","name_jp","ja","jp","en"])if(obj[k])return normalizeNameText(obj[k]);if(Array.isArray(obj.names))return normalizeNameText(obj.names);if(obj.nameMap)return normalizeNameText(obj.nameMap.ja||obj.nameMap.jp||obj.nameMap.en||Object.values(obj.nameMap)[0]);return""}
   function walk(obj,parentKey=""){if(obj==null||typeof obj!=="object"||seen.has(obj))return;seen.add(obj);if(Array.isArray(obj)){obj.forEach(v=>walk(v,parentKey));return}const own=extractName(obj);if(own){if(obj.id)put(obj.id,own);if(obj.stationId)put(obj.stationId,own);if(obj.platformId)put(obj.platformId,own);if(parentKey)put(parentKey,own)}for(const[k,v]of Object.entries(obj)){if((k==="stations"||k==="platforms"||k==="positions")&&v&&typeof v==="object"&&!Array.isArray(v)){for(const[id,val]of Object.entries(v)){if(typeof val==="string"){if(!/^-?\d+(\.\d+)?[, ]+-?\d+/.test(val))put(id,val)}else if(val&&typeof val==="object"){const n=extractName(val);if(n)put(id,n)}}}walk(v,k)}}walk(root);return map}
 
 function stationCandidates(id){const s=String(id||""),out=[s];s.split(/[_|,;:\/]/).forEach(x=>{if(x)out.push(x)});const nums=s.match(/-?\d{5,}/g);if(nums)out.push(...nums);return[...new Set(out)]}
@@ -98,10 +102,15 @@ function getStationDisplay(id){
   if(s[1]) html += `<tspan class="station-sub"> (${escapeHtml(s[1])})</tspan>`;
   return html;
 }
+function findStationIndex(stations, targetRaw){
+  return stations.findIndex(s => stationRawName(String(s).split('_')[0],0).includes(targetRaw) || targetRaw.includes(stationRawName(String(s).split('_')[0],0).split('|')[0]));
+}
 
-// ========== 路線解析・統合（分岐駅マージ） ==========
+// ========== 路線解析・トラック分離 ==========
 function parseRoutes(data) {
   const groups = {};
+  const durationMap = new Map();
+  
   function walk(obj) {
     if (!obj || typeof obj !== 'object') return;
     if (Array.isArray(obj.routes)) {
@@ -109,12 +118,13 @@ function parseRoutes(data) {
         const base = normalize(r.name);
         const kw = CONFIG.KEYWORDS.find(k => base.includes(k));
         if (!kw) return;
-        if (!groups[kw]) groups[kw] = { name: kw, color: colorFromNumber(r.color), rawRoutes: [], durationMap: new Map() };
+        if (!groups[kw]) groups[kw] = { name: kw, color: colorFromNumber(r.color), rawRoutes: [] };
         groups[kw].rawRoutes.push(r);
+        // durations マッピング保存
         if (r.stations && r.durations) {
           for(let i=0;i<r.stations.length-1;i++){
             const k = `${String(r.stations[i]).split('_')[0]}_${String(r.stations[i+1]).split('_')[0]}`;
-            groups[kw].durationMap.set(k, r.durations[i]);
+            durationMap.set(k, r.durations[i]);
           }
         }
       });
@@ -124,88 +134,89 @@ function parseRoutes(data) {
   walk(data);
 
   return Object.values(groups).map(g => {
-    // 1. 最長路線をバックボーンに設定
-    const sorted = g.rawRoutes.sort((a,b) => b.stations.length - a.stations.length);
-    let backbone = [...sorted[0].stations];
+    // 本線と支線に分離
+    const mainR = g.rawRoutes.filter(r => !isBranch(r.name));
+    const branchR = g.rawRoutes.filter(r => isBranch(r.name));
     
-    // 2. 他路線の駅を順序維持で挿入（共有駅は統合）
-    sorted.forEach(r => {
-      r.stations.forEach((st, i) => {
-        const rawId = String(st).split('_')[0];
-        if (!backbone.some(b => String(b).split('_')[0] === rawId)) {
-          // 前後の駅がバックボーンにあるか探索
+    function buildTrack(routes, label, x, labelX) {
+      const sorted = routes.sort((a,b) => b.stations.length - a.stations.length);
+      if(!sorted.length) return null;
+      let backbone = [...sorted[0].stations];
+      // 共有駅統合・挿入
+      sorted.forEach(r => r.stations.forEach((st,i) => {
+        const rid = String(st).split('_')[0];
+        if(!backbone.some(b=>String(b).split('_')[0]===rid)){
           const prev = i>0 ? String(r.stations[i-1]).split('_')[0] : null;
-          const pIdx = backbone.findIndex(b => String(b).split('_')[0] === prev);
-          if (pIdx !== -1) backbone.splice(pIdx + 1, 0, st);
-          else backbone.push(st);
+          const idx = backbone.findIndex(b=>String(b).split('_')[0]===prev);
+          idx!==-1 ? backbone.splice(idx+1,0,st) : backbone.push(st);
         }
-      });
-    });
-
-    // 3. durations 配列を再構築
-    const durations = [];
-    for(let i=0; i<backbone.length-1; i++){
-      const from = String(backbone[i]).split('_')[0];
-      const to = String(backbone[i+1]).split('_')[0];
-      durations.push(g.durationMap.get(`${from}_${to}`) || g.durationMap.get(`${to}_${from}`) || 60000);
+      }));
+      // durations 再構築
+      const durations = [];
+      for(let i=0; i<backbone.length-1; i++){
+        const f=String(backbone[i]).split('_')[0], t=String(backbone[i+1]).split('_')[0];
+        durations.push(durationMap.get(`${f}_${t}`)||durationMap.get(`${t}_${f}`)||60000);
+      }
+      return { label, stations: backbone, durations, x, labelX };
     }
 
+    const tracks = [];
+    tracks.push(buildTrack(mainR, "本線", 500, 680));
+    if(branchR.length) tracks.push(buildTrack(branchR, "支線", 660, 840));
+    
     return {
       name: g.name,
       color: g.color,
-      stations: backbone,
-      durations,
+      tracks: tracks.filter(Boolean),
       services: [...new Set(g.rawRoutes.map(r => normalize(r.route)))]
     };
   }).sort((a,b) => a.name.localeCompare(b.name, 'ja'));
 }
 
-// ========== 位置計算（durations 基準・→判定不使用） ==========
-function calcPosition(route, arr, now, monitorIdx) {
-  const durations = route.durations;
-  const stations = route.stations;
+// ========== 位置計算（durations 基準・→不使用） ==========
+function calcPosition(track, arr, now, monitorIdx) {
+  const durations = track.durations;
+  const stations = track.stations;
   const arrivalTime = Number(arr.arrival);
 
-  // 累積時間（監視駅基準）
   const cum = new Array(stations.length).fill(0);
   for(let i=monitorIdx; i<durations.length; i++) cum[i+1] = cum[i] + durations[i];
   for(let i=monitorIdx-1; i>=0; i--) cum[i] = cum[i+1] - durations[i];
 
-  // 全駅予測時刻
   const expected = stations.map((_,i) => arrivalTime + cum[i] - cum[monitorIdx]);
-
-  // 現在区間特定
   for(let i=0; i<expected.length-1; i++){
     if(now >= expected[i] && now < expected[i+1]){
       const dur = durations[i] || 60000;
       const progress = Math.max(0, Math.min(1, (now - expected[i]) / dur));
       const pos = i + progress;
       
-      // 🚫→判定不使用：目的地インデックスと現在位置の大小関係で左右決定
+      // 🚫→不使用: destIdx < pos なら左(上り), 否則右(下り)
       const destRaw = String(arr.destination).split('||')[0];
-      const destIdx = stations.findIndex(s => stationRawName(String(s).split('_')[0],0).includes(destRaw));
+      const destIdx = findStationIndex(stations, destRaw);
       const side = (destIdx !== -1 && destIdx < pos) ? 'left' : 'right';
-
-      return { pos, side, fromIdx: i, toIdx: i+1, status: progress < 0.15 ? "dwell" : "running", progress };
+      return { pos, side, fromIdx: i, toIdx: i+1, status: progress < 0.15 ? "dwell" : "running" };
     }
   }
-
-  // フォールバック
   const destRaw = String(arr.destination).split('||')[0];
-  const destIdx = stations.findIndex(s => stationRawName(String(s).split('_')[0],0).includes(destRaw));
+  const destIdx = findStationIndex(stations, destRaw);
   const pos = now < expected[0] ? 0 : stations.length-1;
-  return { pos, side: destIdx < pos ? 'left' : 'right', fromIdx: Math.max(0,pos-1), toIdx: Math.min(pos+1,stations.length-1), status: now < expected[0] ? "waiting" : "arrived", progress: 0 };
+  return { pos, side: destIdx < pos ? 'left' : 'right', fromIdx: Math.max(0,pos-1), toIdx: Math.min(pos+1,stations.length-1), status: now < expected[0] ? "waiting" : "arrived" };
 }
 
 async function updateTrains() {
   const route = state.unifiedRoutes[state.selectedRouteIdx];
   if (!route) return;
 
-  const pollPoints = [route.stations[0], route.stations[Math.floor(route.stations.length/2)], route.stations[route.stations.length-1]].map(id=>String(id).split('_')[0]);
-  state.pollStations = pollPoints;
+  // 🚂 5点均等ポーリングで列車取りこぼし防止
+  const pollCount = 5;
+  const step = Math.max(1, Math.floor(route.tracks[0].stations.length / pollCount));
+  const pollPoints = [];
+  for(let i=0; i<pollCount; i++) pollPoints.push(route.tracks[0].stations[i * step]);
+  pollPoints.push(route.tracks[0].stations[route.tracks[0].stations.length-1]);
+  state.pollStations = [...new Set(pollPoints.map(id=>String(id).split('_')[0]))];
 
   const allArrivals = [];
-  for(const sId of new Set(pollPoints)){
+  for(const sId of state.pollStations){
     try{
       const res = await fetch(`${CONFIG.ARRIVALS_API}?stationId=${encodeURIComponent(sId)}&worldIndex=0`);
       if(res.ok){ const j=await res.json(); if(Array.isArray(j)) allArrivals.push(...j); }
@@ -214,27 +225,41 @@ async function updateTrains() {
 
   const now = Date.now();
   const seen = new Set();
-  const monitorIdx = Math.floor(route.stations.length/2);
   state.trains = [];
 
   allArrivals.forEach(arr => {
+    // 🎯 マッチング緩和: キーワード包含 or 行先一致で取得
     const arrBase = normalize(arr.name);
-    const routeBase = route.name;
-    if(!arrBase.includes(routeBase) && !routeBase.includes(arrBase)) return;
+    const kwMatch = CONFIG.KEYWORDS.some(k=>arrBase.includes(k) && route.name.includes(k));
+    if(!kwMatch && !normalize(arr.destination).includes(route.name)) return;
     
     const key = `${arr.arrival}_${normalize(arr.destination)}_${normalize(arr.route)}`;
     if(seen.has(key)) return; seen.add(key);
 
-    const p = calcPosition(route, arr, now, monitorIdx);
+    // トラック割り当て
+    let activeTrack = route.tracks[0];
+    const destRaw = String(arr.destination).split('||')[0];
+    for(const t of route.tracks){
+      if(findStationIndex(t.stations, destRaw)!==-1) { activeTrack=t; break; }
+    }
+
+    const monitorIdx = Math.floor(activeTrack.stations.length/2);
+    const p = calcPosition(activeTrack, arr, now, monitorIdx);
+    const service = normalize(arr.route).replace(route.name,"").trim()||"普通";
+    const isExpress = !CONFIG.LOCAL_SERVICES.includes(service);
+
+    // 🛤️ 4レーン分離
+    // 左: 優等(370) / 普通(440)   右: 普通(560) / 優等(630)
+    let laneX;
+    if(p.side==='left') laneX = isExpress ? 370 : 440;
+    else laneX = isExpress ? 630 : 560;
+    // 支線補正
+    if(activeTrack !== route.tracks[0]) laneX += 160;
+
     state.trains.push({
-      id: Math.random(),
-      dest: normalize(arr.destination),
-      service: normalize(arr.route).replace(routeBase,"").trim()||"普通",
-      ...p,
-      arrival: arr.arrival,
-      platform: arr.platform,
-      color: colorFromNumber(arr.color),
-      raw: arr
+      id: Math.random(), track: activeTrack, dest: normalize(arr.destination),
+      service, ...p, x: laneX,
+      arrival: arr.arrival, platform: arr.platform, color: colorFromNumber(arr.color)
     });
   });
   renderMap();
@@ -246,21 +271,33 @@ function renderMap() {
   const route = state.unifiedRoutes[state.selectedRouteIdx];
   if (!route) return;
 
-  const SPACING = 90, MARGIN = 120, h = Math.max(800, route.stations.length * SPACING + MARGIN * 2);
-  svg.setAttribute("viewBox", `0 0 1000 ${h}`); svg.style.height = h + "px";
+  const maxStations = Math.max(...route.tracks.map(t=>t.stations.length));
+  const SPACING = 90, MARGIN = 120, h = Math.max(800, maxStations * SPACING + MARGIN * 2);
+  svg.setAttribute("viewBox", `0 0 1100 ${h}`); svg.style.height = h + "px";
 
-  let html = `<line x1="500" y1="${MARGIN}" x2="500" y2="${h - MARGIN}" stroke="${route.color}" stroke-width="10" stroke-linecap="round"/>`;
-  route.stations.forEach((s,i) => {
-    const y = MARGIN + i*SPACING;
-    html += `<circle class="station-node" cx="500" cy="${y}" r="8"/><text class="station-text" x="525" y="${y+5}">${getStationDisplay(s)}</text>`;
+  let html = '';
+  route.tracks.forEach(track => {
+    const lineEnd = MARGIN + track.stations.length * SPACING;
+    html += `<line x1="${track.x}" y1="${MARGIN}" x2="${track.x}" y2="${lineEnd}" stroke="${route.color}" stroke-width="10" stroke-linecap="round"/>`;
+    track.stations.forEach((s,i) => {
+      const y = MARGIN + i*SPACING;
+      html += `<circle class="station-node" cx="${track.x}" cy="${y}" r="8"/><text class="station-text" x="${track.labelX}" y="${y+5}">${getStationDisplay(s)}</text>`;
+    });
+    html += `<text x="${track.x}" y="${lineEnd+30}" class="branch-label">${track.label}</text>`;
   });
 
+  // 分岐接続線（本線終点↔支線始点）
+  if(route.tracks.length > 1) {
+    const mEnd = MARGIN + route.tracks[0].stations.length * SPACING;
+    const bStart = MARGIN;
+    html += `<path d="M ${route.tracks[0].x} ${mEnd} Q ${(route.tracks[0].x+route.tracks[1].x)/2} ${(mEnd+bStart)/2} ${route.tracks[1].x} ${bStart}" fill="none" stroke="${route.color}" stroke-width="6" stroke-dasharray="8 4" opacity="0.6"/>`;
+  }
+
   state.trains.forEach(t => {
-    const y = MARGIN + t.pos * SPACING;
-    const x = t.side === 'left' ? 440 : 560; // 明確に左右分離
+    const y = MARGIN + t.pos * 90;
     const onClick = `showTrainDetail(${JSON.stringify({dest:t.dest,service:t.service,arrival:t.arrival,platform:t.platform,color:t.color,status:t.status}).replace(/"/g,'&quot;')})`;
     
-    html += `<g class="train-unit" transform="translate(${x}, ${y})" onclick="${onClick}">
+    html += `<g class="train-unit" transform="translate(${t.x}, ${y})" onclick="${onClick}">
       <rect x="-28" y="-28" width="56" height="56" rx="8" fill="#151c2c" stroke="${t.color}" stroke-width="2" />
       <image class="train-img" href="/assets/kr3000.png" x="-26" y="-26" width="52" height="52" preserveAspectRatio="xMidYMid meet" />
       <rect x="-24" y="-38" width="48" height="14" rx="4" fill="${t.color}" />
@@ -284,7 +321,7 @@ function renderRouteList() {
     .filter(r => r.name.toLowerCase().includes(q))
     .map((r, i) => `<div class="route-item ${state.selectedRouteIdx === i ? 'active' : ''}" onclick="selectRoute(${i})">
       <div class="swatch" style="background:${r.color}"></div><div style="font-weight:bold">${r.name}</div>
-      <div style="font-size:11px;color:var(--muted)">${r.stations.length}駅 / ${r.services.join(', ')}</div>
+      <div style="font-size:11px;color:var(--muted)">${r.tracks[0].stations.length}駅 / ${r.services.join(', ')}${r.tracks.length>1?' (支線有)':''}</div>
     </div>`).join("") || '<div style="padding:10px;color:var(--muted)">該当なし</div>';
 }
 
