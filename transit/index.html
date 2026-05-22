@@ -22,7 +22,7 @@ button,input{border:1px solid var(--line);border-radius:8px;background:#0d1324;c
 .route-item.active{background:var(--glow);border-color:var(--accent)}
 .swatch{width:40px;height:4px;border-radius:2px;margin-bottom:6px}
 .map-container{position:relative;overflow:auto;background:radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0) 0 0/32px 32px}
-svg{display:block;min-width:1100px}
+svg{display:block;min-width:1000px}
 .station-node{fill:var(--panel);stroke:var(--accent);stroke-width:3}
 .station-text{fill:var(--ink);font-size:14px;font-weight:600}
 .station-sub{fill:var(--muted);font-size:11px}
@@ -31,14 +31,16 @@ svg{display:block;min-width:1100px}
 .train-label{font-size:10px;fill:#fff;font-weight:bold;text-anchor:middle}
 .train-img{pointer-events:none}
 .branch-label{fill:var(--muted);font-size:13px;font-weight:700;letter-spacing:1px}
-.details-panel{padding:16px;border-top:1px solid var(--line);background:var(--panel);max-height:300px;overflow-y:auto}
+.timetable{margin-top:8px;max-height:180px;overflow-y:auto;font-size:12px;border-top:1px solid var(--line);padding-top:8px}
+.timetable-row{display:grid;grid-template-columns:40px 1fr 60px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.timetable-row.active{color:var(--accent);font-weight:bold}
 #status{font-size:12px;margin-left:auto}
 .ok{color:#10b981}.err{color:#f43f5e}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><div class="logo">SC</div><div><h1>勝炭鉄道</h1><div class="sub">Multi-Track / 4-Lane Engine</div></div></div>
+  <div class="brand"><div class="logo">SC</div><div><h1>勝炭鉄道</h1><div class="sub">Merged-Branch / 4-Lane Engine</div></div></div>
   <div id="status">システム待機中</div>
 </header>
 <div class="layout">
@@ -106,11 +108,9 @@ function findStationIndex(stations, targetRaw){
   return stations.findIndex(s => stationRawName(String(s).split('_')[0],0).includes(targetRaw) || targetRaw.includes(stationRawName(String(s).split('_')[0],0).split('|')[0]));
 }
 
-// ========== 路線解析・トラック分離 ==========
+// ========== 路線解析・分岐統合 ==========
 function parseRoutes(data) {
-  const groups = {};
-  const durationMap = new Map();
-  
+  const groups = {}, durationMap = new Map();
   function walk(obj) {
     if (!obj || typeof obj !== 'object') return;
     if (Array.isArray(obj.routes)) {
@@ -120,7 +120,6 @@ function parseRoutes(data) {
         if (!kw) return;
         if (!groups[kw]) groups[kw] = { name: kw, color: colorFromNumber(r.color), rawRoutes: [] };
         groups[kw].rawRoutes.push(r);
-        // durations マッピング保存
         if (r.stations && r.durations) {
           for(let i=0;i<r.stations.length-1;i++){
             const k = `${String(r.stations[i]).split('_')[0]}_${String(r.stations[i+1]).split('_')[0]}`;
@@ -134,15 +133,13 @@ function parseRoutes(data) {
   walk(data);
 
   return Object.values(groups).map(g => {
-    // 本線と支線に分離
     const mainR = g.rawRoutes.filter(r => !isBranch(r.name));
     const branchR = g.rawRoutes.filter(r => isBranch(r.name));
     
-    function buildTrack(routes, label, x, labelX) {
+    function buildTrack(routes) {
       const sorted = routes.sort((a,b) => b.stations.length - a.stations.length);
       if(!sorted.length) return null;
       let backbone = [...sorted[0].stations];
-      // 共有駅統合・挿入
       sorted.forEach(r => r.stations.forEach((st,i) => {
         const rid = String(st).split('_')[0];
         if(!backbone.some(b=>String(b).split('_')[0]===rid)){
@@ -151,39 +148,52 @@ function parseRoutes(data) {
           idx!==-1 ? backbone.splice(idx+1,0,st) : backbone.push(st);
         }
       }));
-      // durations 再構築
       const durations = [];
       for(let i=0; i<backbone.length-1; i++){
         const f=String(backbone[i]).split('_')[0], t=String(backbone[i+1]).split('_')[0];
         durations.push(durationMap.get(`${f}_${t}`)||durationMap.get(`${t}_${f}`)||60000);
       }
-      return { label, stations: backbone, durations, x, labelX };
+      return { stations: backbone, durations };
     }
 
-    const tracks = [];
-    tracks.push(buildTrack(mainR, "本線", 500, 680));
-    if(branchR.length) tracks.push(buildTrack(branchR, "支線", 660, 840));
+    const main = buildTrack(mainR.length ? mainR : g.rawRoutes);
+    const branch = branchR.length ? buildTrack(branchR) : null;
     
+    // 分岐点検出（共通プレフィックス長）
+    let splitIdx = 0;
+    if(branch) {
+      const minLen = Math.min(main.stations.length, branch.stations.length);
+      for(let i=0; i<minLen; i++) {
+        if(main.stations[i] === branch.stations[i]) splitIdx = i+1;
+        else break;
+      }
+    }
+
     return {
       name: g.name,
       color: g.color,
-      tracks: tracks.filter(Boolean),
+      main,
+      branch,
+      splitIdx,
       services: [...new Set(g.rawRoutes.map(r => normalize(r.route)))]
     };
   }).sort((a,b) => a.name.localeCompare(b.name, 'ja'));
 }
 
-// ========== 位置計算（durations 基準・→不使用） ==========
-function calcPosition(track, arr, now, monitorIdx) {
+// ========== 位置計算（durations 基準・→不使用・始発偏り解消） ==========
+function calcPosition(track, arr, now, baseIdx) {
   const durations = track.durations;
   const stations = track.stations;
   const arrivalTime = Number(arr.arrival);
 
+  // 基準駅(baseIdx)からの累積時間
   const cum = new Array(stations.length).fill(0);
-  for(let i=monitorIdx; i<durations.length; i++) cum[i+1] = cum[i] + durations[i];
-  for(let i=monitorIdx-1; i>=0; i--) cum[i] = cum[i+1] - durations[i];
+  for(let i=baseIdx; i<durations.length; i++) cum[i+1] = cum[i] + durations[i];
+  for(let i=baseIdx-1; i>=0; i--) cum[i] = cum[i+1] - durations[i];
 
-  const expected = stations.map((_,i) => arrivalTime + cum[i] - cum[monitorIdx]);
+  // 全駅予測時刻
+  const expected = stations.map((_,i) => arrivalTime + cum[i]);
+  
   for(let i=0; i<expected.length-1; i++){
     if(now >= expected[i] && now < expected[i+1]){
       const dur = durations[i] || 60000;
@@ -194,32 +204,38 @@ function calcPosition(track, arr, now, monitorIdx) {
       const destRaw = String(arr.destination).split('||')[0];
       const destIdx = findStationIndex(stations, destRaw);
       const side = (destIdx !== -1 && destIdx < pos) ? 'left' : 'right';
-      return { pos, side, fromIdx: i, toIdx: i+1, status: progress < 0.15 ? "dwell" : "running" };
+      return { pos, side, fromIdx: i, toIdx: i+1, status: progress < 0.15 ? "dwell" : "running", baseTime: arrivalTime, baseIdx, expected };
     }
   }
+  
   const destRaw = String(arr.destination).split('||')[0];
   const destIdx = findStationIndex(stations, destRaw);
   const pos = now < expected[0] ? 0 : stations.length-1;
-  return { pos, side: destIdx < pos ? 'left' : 'right', fromIdx: Math.max(0,pos-1), toIdx: Math.min(pos+1,stations.length-1), status: now < expected[0] ? "waiting" : "arrived" };
+  return { pos, side: destIdx < pos ? 'left' : 'right', fromIdx: Math.max(0,pos-1), toIdx: Math.min(pos+1,stations.length-1), status: now < expected[0] ? "waiting" : "arrived", baseTime: arrivalTime, baseIdx, expected };
 }
 
 async function updateTrains() {
   const route = state.unifiedRoutes[state.selectedRouteIdx];
   if (!route) return;
 
-  // 🚂 5点均等ポーリングで列車取りこぼし防止
-  const pollCount = 5;
-  const step = Math.max(1, Math.floor(route.tracks[0].stations.length / pollCount));
+  // 🚂 5点均等ポーリング（偏り解消）
+  const track = route.main;
+  const step = Math.max(1, Math.floor(track.stations.length / 5));
   const pollPoints = [];
-  for(let i=0; i<pollCount; i++) pollPoints.push(route.tracks[0].stations[i * step]);
-  pollPoints.push(route.tracks[0].stations[route.tracks[0].stations.length-1]);
-  state.pollStations = [...new Set(pollPoints.map(id=>String(id).split('_')[0]))];
+  for(let i=0; i<5; i++) pollPoints.push(track.stations[i * step]);
+  pollPoints.push(track.stations[track.stations.length-1]);
+  
+  // 各ポイントのトラック内インデックスを保持
+  const pollData = [...new Set(pollPoints.map(s=>String(s).split('_')[0]))].map(id => ({
+    id, idx: track.stations.findIndex(s => String(s).split('_')[0] === id)
+  })).filter(p => p.idx !== -1);
+  state.pollStations = pollData;
 
   const allArrivals = [];
-  for(const sId of state.pollStations){
+  for(const p of pollData){
     try{
-      const res = await fetch(`${CONFIG.ARRIVALS_API}?stationId=${encodeURIComponent(sId)}&worldIndex=0`);
-      if(res.ok){ const j=await res.json(); if(Array.isArray(j)) allArrivals.push(...j); }
+      const res = await fetch(`${CONFIG.ARRIVALS_API}?stationId=${encodeURIComponent(p.id)}&worldIndex=0`);
+      if(res.ok){ const j=await res.json(); if(Array.isArray(j)) j.forEach(arr => { arr._baseIdx = p.idx; allArrivals.push(arr); }); }
     }catch(e){}
   }
 
@@ -228,7 +244,6 @@ async function updateTrains() {
   state.trains = [];
 
   allArrivals.forEach(arr => {
-    // 🎯 マッチング緩和: キーワード包含 or 行先一致で取得
     const arrBase = normalize(arr.name);
     const kwMatch = CONFIG.KEYWORDS.some(k=>arrBase.includes(k) && route.name.includes(k));
     if(!kwMatch && !normalize(arr.destination).includes(route.name)) return;
@@ -236,29 +251,33 @@ async function updateTrains() {
     const key = `${arr.arrival}_${normalize(arr.destination)}_${normalize(arr.route)}`;
     if(seen.has(key)) return; seen.add(key);
 
-    // トラック割り当て
-    let activeTrack = route.tracks[0];
-    const destRaw = String(arr.destination).split('||')[0];
-    for(const t of route.tracks){
-      if(findStationIndex(t.stations, destRaw)!==-1) { activeTrack=t; break; }
+    // 本線/支線割り当て
+    let activeTrack = route.main;
+    if(route.branch && findStationIndex(route.branch.stations, String(arr.destination).split('||')[0]) !== -1) {
+      activeTrack = route.branch;
     }
 
-    const monitorIdx = Math.floor(activeTrack.stations.length/2);
-    const p = calcPosition(activeTrack, arr, now, monitorIdx);
+    // baseIdx を補正（支線の場合はインデックス再計算）
+    let baseIdx = arr._baseIdx;
+    if(activeTrack === route.branch) {
+      const origStationId = String(track.stations[baseIdx]).split('_')[0];
+      baseIdx = activeTrack.stations.findIndex(s => String(s).split('_')[0] === origStationId);
+      if(baseIdx === -1) baseIdx = Math.floor(activeTrack.stations.length/2);
+    }
+
+    const p = calcPosition(activeTrack, arr, now, baseIdx);
     const service = normalize(arr.route).replace(route.name,"").trim()||"普通";
     const isExpress = !CONFIG.LOCAL_SERVICES.includes(service);
 
-    // 🛤️ 4レーン分離
-    // 左: 優等(370) / 普通(440)   右: 普通(560) / 優等(630)
-    let laneX;
-    if(p.side==='left') laneX = isExpress ? 370 : 440;
-    else laneX = isExpress ? 630 : 560;
-    // 支線補正
-    if(activeTrack !== route.tracks[0]) laneX += 160;
+    // 🛤️ 4レーン配置：[優][普]｜[普][優]
+    let x;
+    if(p.side === 'left') x = isExpress ? 370 : 430;
+    else x = isExpress ? 630 : 570;
+    if(activeTrack === route.branch) x += 160;
 
     state.trains.push({
       id: Math.random(), track: activeTrack, dest: normalize(arr.destination),
-      service, ...p, x: laneX,
+      service, ...p, x,
       arrival: arr.arrival, platform: arr.platform, color: colorFromNumber(arr.color)
     });
   });
@@ -271,31 +290,45 @@ function renderMap() {
   const route = state.unifiedRoutes[state.selectedRouteIdx];
   if (!route) return;
 
-  const maxStations = Math.max(...route.tracks.map(t=>t.stations.length));
-  const SPACING = 90, MARGIN = 120, h = Math.max(800, maxStations * SPACING + MARGIN * 2);
-  svg.setAttribute("viewBox", `0 0 1100 ${h}`); svg.style.height = h + "px";
+  const maxLen = Math.max(route.main.stations.length, route.branch?.stations.length||0);
+  const SPACING = 90, MARGIN = 120, h = Math.max(800, maxLen * SPACING + MARGIN * 2 + 40);
+  svg.setAttribute("viewBox", `0 0 900 ${h}`); svg.style.height = h + "px";
 
   let html = '';
-  route.tracks.forEach(track => {
-    const lineEnd = MARGIN + track.stations.length * SPACING;
-    html += `<line x1="${track.x}" y1="${MARGIN}" x2="${track.x}" y2="${lineEnd}" stroke="${route.color}" stroke-width="10" stroke-linecap="round"/>`;
-    track.stations.forEach((s,i) => {
-      const y = MARGIN + i*SPACING;
-      html += `<circle class="station-node" cx="${track.x}" cy="${y}" r="8"/><text class="station-text" x="${track.labelX}" y="${y+5}">${getStationDisplay(s)}</text>`;
-    });
-    html += `<text x="${track.x}" y="${lineEnd+30}" class="branch-label">${track.label}</text>`;
-  });
-
-  // 分岐接続線（本線終点↔支線始点）
-  if(route.tracks.length > 1) {
-    const mEnd = MARGIN + route.tracks[0].stations.length * SPACING;
-    const bStart = MARGIN;
-    html += `<path d="M ${route.tracks[0].x} ${mEnd} Q ${(route.tracks[0].x+route.tracks[1].x)/2} ${(mEnd+bStart)/2} ${route.tracks[1].x} ${bStart}" fill="none" stroke="${route.color}" stroke-width="6" stroke-dasharray="8 4" opacity="0.6"/>`;
+  const cx = 500; // 路線中心
+  
+  // 本線描画（分岐点まで単線、その後分岐）
+  const mainEnd = MARGIN + route.main.stations.length * SPACING;
+  const branchEnd = route.branch ? MARGIN + route.branch.stations.length * SPACING : mainEnd;
+  
+  if(route.branch) {
+    const splitY = MARGIN + route.splitIdx * SPACING;
+    // 共通区間（上→分岐点）
+    html += `<line x1="${cx}" y1="${MARGIN}" x2="${cx}" y2="${splitY}" stroke="${route.color}" stroke-width="10" stroke-linecap="round"/>`;
+    // 分岐以降
+    html += `<line x1="${cx}" y1="${splitY}" x2="${cx}" y2="${mainEnd}" stroke="${route.color}" stroke-width="10" stroke-linecap="round"/>`;
+    html += `<line x1="${cx}" y1="${splitY}" x2="${cx}" y2="${splitY + (route.branch.stations.length - route.splitIdx) * SPACING}" stroke="${route.color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="8 4" transform="translate(160, 0)"/>`;
+  } else {
+    html += `<line x1="${cx}" y1="${MARGIN}" x2="${cx}" y2="${mainEnd}" stroke="${route.color}" stroke-width="10" stroke-linecap="round"/>`;
   }
 
+  // 駅描画
+  route.main.stations.forEach((s,i) => {
+    const y = MARGIN + i*SPACING;
+    html += `<circle class="station-node" cx="${cx}" cy="${y}" r="8"/><text class="station-text" x="${cx+140}" y="${y+5}">${getStationDisplay(s)}</text>`;
+  });
+  if(route.branch) {
+    route.branch.stations.forEach((s,i) => {
+      if(i < route.splitIdx) return; // 重複駅は本線側で描画済み
+      const y = MARGIN + (route.splitIdx + (i - route.splitIdx)) * SPACING;
+      html += `<circle class="station-node" cx="${cx+160}" cy="${y}" r="7"/><text class="station-text" x="${cx+300}" y="${y+5}">${getStationDisplay(s)}</text>`;
+    });
+  }
+
+  // 列車描画
   state.trains.forEach(t => {
     const y = MARGIN + t.pos * 90;
-    const onClick = `showTrainDetail(${JSON.stringify({dest:t.dest,service:t.service,arrival:t.arrival,platform:t.platform,color:t.color,status:t.status}).replace(/"/g,'&quot;')})`;
+    const onClick = `showTrainDetail(${JSON.stringify({dest:t.dest,service:t.service,arrival:t.arrival,platform:t.platform,color:t.color,status:t.status,track:t.track,baseIdx:t.baseIdx,expected:t.expected}).replace(/"/g,'&quot;')})`;
     
     html += `<g class="train-unit" transform="translate(${t.x}, ${y})" onclick="${onClick}">
       <rect x="-28" y="-28" width="56" height="56" rx="8" fill="#151c2c" stroke="${t.color}" stroke-width="2" />
@@ -312,7 +345,29 @@ window.showTrainDetail = function(t) {
   const eta = new Date(t.arrival);
   const timeStr = eta.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
   const statusJa = {dwell:"停車中", running:"走行中", waiting:"始発待機", arrived:"終点通過"}[t.status]||t.status;
-  panel.innerHTML = `<h3>${t.service} ${t.dest}行</h3><p><strong>到着予定:</strong> ${timeStr}</p><p><strong>ホーム:</strong> ${t.platform||'-'}</p><p><strong>状態:</strong> ${statusJa}</p><p style="font-size:11px;color:var(--muted);margin-top:8px">※ 位置・時刻は durations 基準の推定値です</p>`;
+  
+  // 各駅時刻表生成
+  let timetableHtml = '';
+  if(t.expected && t.track) {
+    t.track.stations.forEach((s, i) => {
+      const estTime = new Date(t.expected[i]);
+      const tStr = estTime.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+      const isPast = Date.now() >= t.expected[i];
+      const isCurrent = i >= t.fromIdx && i <= t.toIdx;
+      timetableHtml += `<div class="timetable-row ${isCurrent?'active':''}" style="${isPast?'opacity:0.5':''}">
+        <div>${tStr}</div><div>${getStationDisplay(s)}</div><div>${isCurrent?(t.status==='dwell'?'停車中':'走行中'):(isPast?'通過':'未通過')}</div>
+      </div>`;
+    });
+  }
+
+  panel.innerHTML = `
+    <h3>${t.service} ${t.dest}行</h3>
+    <p><strong>監視駅到着予定:</strong> ${timeStr}</p>
+    <p><strong>ホーム:</strong> ${t.platform||'-'}</p>
+    <p><strong>状態:</strong> ${statusJa}</p>
+    <div class="timetable">${timetableHtml || '<div style="padding:4px;color:var(--muted)">時刻データなし</div>'}</div>
+    <p style="font-size:11px;color:var(--muted);margin-top:8px">※ 位置・時刻は durations 基準の推定値です</p>
+  `;
 };
 
 function renderRouteList() {
@@ -321,7 +376,7 @@ function renderRouteList() {
     .filter(r => r.name.toLowerCase().includes(q))
     .map((r, i) => `<div class="route-item ${state.selectedRouteIdx === i ? 'active' : ''}" onclick="selectRoute(${i})">
       <div class="swatch" style="background:${r.color}"></div><div style="font-weight:bold">${r.name}</div>
-      <div style="font-size:11px;color:var(--muted)">${r.tracks[0].stations.length}駅 / ${r.services.join(', ')}${r.tracks.length>1?' (支線有)':''}</div>
+      <div style="font-size:11px;color:var(--muted)">${r.main.stations.length}駅 / ${r.services.join(', ')}${r.branch?' (分岐有)':''}</div>
     </div>`).join("") || '<div style="padding:10px;color:var(--muted)">該当なし</div>';
 }
 
