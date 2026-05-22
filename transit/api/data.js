@@ -1,50 +1,35 @@
-export const config = {
-  runtime: 'edge', 
-};
+// transit/api/data.js
+export default async function handler(req, res) {
+  // CORS ヘッダー設定
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-export default async function handler(req) {
+  // プリフライトリクエスト対応
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+    return res.status(200).end();
   }
 
   try {
-    const url = new URL(req.url);
-    const endpoint = url.pathname === '/api/arrivals' ? 'arrivals' : 'data';
-    const queryString = url.search;
+    const isArrivals = req.url.includes('arrivals');
+    const endpoint = isArrivals ? 'arrivals' : 'data';
+    const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
     
-    const response = await fetch(
-      `http://118.27.228.27:8888/${endpoint}${queryString}`,
-      { 
-        headers: { 'Accept': 'application/json' },
-        cache: 'no-store'
-      }
-    );
+    const targetUrl = `http://118.27.228.27:8888/${endpoint}${queryString}`;
+    
+    const response = await fetch(targetUrl, { 
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store' 
+    });
     
     const text = await response.text();
     
-    return new Response(text, {
-      status: response.status,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-      },
-    });
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.status(response.status).send(text);
     
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+    console.error('[MTR Proxy Error]', error.message);
+    res.status(500).json({ error: 'Proxy failed', details: error.message });
   }
 }
