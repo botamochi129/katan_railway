@@ -196,9 +196,16 @@ async function renderMap(){
   if(!state.routes.length){svg.setAttribute("viewBox","0 0 1540 900");svg.style.minHeight="900px";svg.innerHTML='<text x="770" y="300" text-anchor="middle" fill="var(--muted)" font-size="24">データを読み込み中...</text>';return}
   const route=state.routes[state.selected];if(!route){svg.setAttribute("viewBox","0 0 1540 900");svg.style.minHeight="900px";svg.innerHTML='<text x="770" y="300" text-anchor="middle" fill="var(--muted)" font-size="24">路線を選択してください</text>';return}
   
-  const monitorId=route.stations[Math.floor(route.stations.length/2)];
+  // ✅ 駅IDから _ 以降を除去（プラットフォーム情報を削除）
+  const rawMonitorId = route.stations[Math.floor(route.stations.length/2)];
+  const monitorId = String(rawMonitorId).split('_')[0];
+  
   let arrivals=[];
-  try{const res=await fetch(`/api/arrivals?stationId=${encodeURIComponent(monitorId)}&worldIndex=0`,{cache:"no-store"});if(res.ok)arrivals=await res.json();}catch(e){console.warn("Arrivals fetch skipped",e)}
+  try{
+    // ✅ クリーンな駅IDでリクエスト
+    const res=await fetch(`/api/arrivals?stationId=${encodeURIComponent(monitorId)}&worldIndex=0`,{cache:"no-store"});
+    if(res.ok)arrivals=await res.json();
+  }catch(e){console.warn("Arrivals fetch skipped",e)}
   
   state.visibleTrains=calcPositionFromArrivals(route,arrivals,Date.now());
   
