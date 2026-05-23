@@ -48,14 +48,9 @@ const LANES = {
     DOWN_EXPRESS:  70
 };
 
-// --- 座標計算 (ログ出力機能付き) ---
-const getXY = (p, isBranch, train = null, currentDrawingTrains = []) => {
+const getXY = (p, isBranch, train = null) => {
     const route = state.unifiedRoutes[state.selectedIdx];
-    
-    // 支線判定: 列車データが支線行き(isBranch)かつ、現在位置が分岐点(splitIdx)以降なら支線座標
     let baseX = (train && train.isBranch && p > route.splitIdx) ? 750 : 450;
-    
-    // 列車でない（駅の丸など）場合の支線判定
     if (!train && isBranch && p > route.splitIdx) baseX = 750;
 
     let xOffset = 0;
@@ -65,16 +60,23 @@ const getXY = (p, isBranch, train = null, currentDrawingTrains = []) => {
         } else {
             xOffset = train.isExpress ? LANES.DOWN_EXPRESS : LANES.DOWN_LOCAL;
         }
+
+        // --- 物理的な重なり検知 ---
+        // 同じ駅(pos)で、同じレーン(xOffset)にいる他の列車を探す
+        const overlap = state.trains.find(other => 
+            other !== train && 
+            Math.abs(other.pos - p) < 0.1 && // ほぼ同じ位置
+            other.direction === train.direction &&
+            other.isExpress === train.isExpress &&
+            other.renderedX !== undefined // 既に描画位置が決まっている
+        );
+        if (overlap) {
+            xOffset += 12; // 重なっている場合は少し右にずらす
+        }
+        train.renderedX = baseX + xOffset; // 判定用に保存
     }
     
-    const finalX = baseX + xOffset;
-    const finalY = (p + 1) * 90;
-
-    if (train && train.debug) {
-        guiLog(`列車[${train.dest}]: Dir=${train.direction}, Exp=${train.isExpress}, baseX=${baseX}, xOffset=${xOffset} -> X=${finalX}`);
-    }
-
-    return { x: finalX, y: finalY };
+    return { x: baseX + xOffset, y: (p + 1) * 90 };
 };
 
 let state = { stationMap: {}, unifiedRoutes: [], selectedIdx: 0, trains: [] };
@@ -173,7 +175,7 @@ async function updateTrains() {
 
     const scanIds = [...new Set([...route.backbone, ...route.branchStations])];
     const now = Date.now();
-    const fetched = [];
+    let fetched = [];
     const seen = new Set();
 
     await Promise.all(scanIds.map(async (sId) => {
@@ -182,7 +184,6 @@ async function updateTrains() {
             const stationName = clean(state.stationMap[sid_clean]);
             const res = await fetch(`${CONFIG.ARRIVALS_API}?stationId=${sid_clean}&worldIndex=0`);
             const arrivals = await res.json();
-
             if (!Array.isArray(arrivals)) return;
 
             arrivals.forEach(arr => {
@@ -193,6 +194,7 @@ async function updateTrains() {
                 seen.add(tid);
 
                 const destName = clean(arr.destination);
+                // 支線判定
                 const isBranch = route.branchStations.some(bs => clean(state.stationMap[bs.split('_')[0]]) === destName);
                 const currentList = isBranch ? [...route.backbone.slice(0, route.splitIdx + 1), ...route.branchStations] : route.backbone;
 
@@ -201,37 +203,42 @@ async function updateTrains() {
 
                 const arrivalTime = Number(arr.arrival);
                 const diffSec = (arrivalTime - now) / 1000;
-                
-                // 1. 30分以上の古いデータを除外
-                if (Math.abs(diffSec) > 1800) return; 
+                if (Math.abs(diffSec) > 1800) return;
 
-                // 2. 位置計算
+                // --- 向き判定の改良 ---
+                // 到着駅(matchIdx)と終着駅(destIdx)の相対位置で決める
+                const destIdx = currentList.findIndex(st => clean(state.stationMap[st.split('_')[0]]).includes(destName));
+                
+                // インデックスが減る方向なら "up"、増える方向なら "down"
+                let direction = "down";
+                if (destIdx !== -1) {
+                    direction = (destIdx < matchIdx) ? "up" : "down";
+                }
+
                 const pos = matchIdx - (diffSec / 90);
 
-                // 3. 始発駅フィルタリング: 
-                // 進行方向の最初の駅(pos <= 0付近)で、到着まで60秒以上ある場合は表示しない
-                if (pos < 0.1 && diffSec > 60) return;
-
-                // 方向判定
-                const destIdx = currentList.findIndex(st => clean(state.stationMap[st.split('_')[0]]).includes(destName));
-                const direction = (destIdx !== -1 && destIdx < matchIdx) ? "up" : "down";
+                // --- 始発駅制限 (1分前ルール) ---
+                // 始発駅(インデックス0 または 方向転換直後)で、まだ時間が早い場合はスキップ
+                const isOrigin = (direction === "down" && matchIdx === 0) || (direction === "up" && matchIdx === currentList.length - 1);
+                if (isOrigin && diffSec > 60) return;
 
                 fetched.push({
                     dest: destName,
                     service: arr.route || "普通",
-                    pos: Math.max(-0.5, pos), // 始発前も少しだけ描画範囲に含める
+                    pos: pos,
                     isBranch, direction,
                     isExpress: CONFIG.EXPRESS_KEYWORDS.some(k => (arr.route||"").includes(k)),
                     baseTime: arrivalTime,
                     baseIdx: matchIdx,
                     stations: currentList,
-                    debug: true // ログ出力用
+                    debug: true
                 });
             });
         } catch(e) {}
     }));
 
-    state.trains = fetched;
+    // 描画順を制御して重なり判定を安定させる
+    state.trains = fetched.sort((a, b) => a.pos - b.pos);
     render();
 }
 
