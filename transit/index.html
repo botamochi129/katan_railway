@@ -144,44 +144,51 @@ async function updateTrains() {
     console.log(`--- ${route.name} 列車検索開始 (全${scanIds.length}駅スキャン) ---`);
     guiLog(`${route.name}: 列車検索中...`);
 
+    // --- 修正版 updateTrains (一部抜粋) ---
     await Promise.all(scanIds.map(async (sId) => {
         try {
             const sid_clean = sId.split('_')[0];
+            // APIを叩く際の「駅名」をあらかじめ解決しておく
+            const currentStationName = clean(state.stationMap[sid_clean]); 
+    
             const res = await fetch(`${CONFIG.ARRIVALS_API}?stationId=${sid_clean}&worldIndex=0`);
             const arrivals = await res.json();
             successCount++;
-
+    
             if (!Array.isArray(arrivals)) return;
-
+    
             arrivals.forEach(arr => {
-                // 完全一致ログ（失敗時のみ詳細を出すとログが綺麗）
-                if (!route.matchFullNames.includes(arr.name)) {
-                    return; 
-                }
-
+                if (!route.matchFullNames.includes(arr.name)) return;
+    
                 const tid = `${arr.destination}_${arr.arrival}`;
                 if (seen.has(tid)) return;
                 seen.add(tid);
-
+    
                 const destName = clean(arr.destination);
                 const isBranch = route.branchStations.some(bs => clean(state.stationMap[bs.split('_')[0]]) === destName);
                 const currentList = isBranch ? [...route.backbone.slice(0, route.splitIdx + 1), ...route.branchStations] : route.backbone;
-                const matchIdx = currentList.findIndex(st => clean(state.stationMap[st.split('_')[0]]) === clean(arr.station));
-
+    
+                // 【修正ポイント】arr.station ではなく、APIリクエスト時に使用した駅名を使う
+                const matchIdx = currentList.findIndex(st => clean(state.stationMap[st.split('_')[0]]) === currentStationName);
+    
                 if (matchIdx === -1) {
-                    console.warn(`駅名不一致: 列車駅[${arr.station}] が路線図に見当たりません。`);
+                    // ここで警告が出る場合は、sMapの構築に失敗している可能性があります
                     return;
                 }
-
+    
                 const arrivalTime = Number(arr.arrival);
                 const diffSec = (arrivalTime - now) / 1000;
+                
+                // 2026年問題対策：もし時刻が過去すぎる、あるいは遠い未来なら除外
+                if (Math.abs(diffSec) > 3600) return; 
+    
                 let pos = matchIdx - (diffSec / 90);
-
+    
                 const destIdx = currentList.findIndex(st => clean(state.stationMap[st.split('_')[0]]).includes(destName));
                 const direction = (destIdx !== -1 && destIdx < matchIdx) ? "up" : "down";
-
-                console.log(`✅ 列車捕捉: ${arr.route} ${destName}ゆき (位置:${pos.toFixed(2)})`);
-
+    
+                console.log(`✅ 列車捕捉成功: ${destName}ゆき @ ${currentStationName}`);
+    
                 fetched.push({
                     dest: destName,
                     service: arr.route || "普通",
@@ -191,7 +198,9 @@ async function updateTrains() {
                     expectedTime: arrivalTime
                 });
             });
-        } catch(e) {}
+        } catch(e) {
+            console.error("Fetch error for station:", sId, e);
+        }
     }));
 
     state.trains = fetched;
