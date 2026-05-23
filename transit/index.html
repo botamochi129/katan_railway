@@ -42,23 +42,39 @@ const CONFIG = {
 };
 
 const LANES = {
-    DOWN_EXPRESS: -55, // 下り 優等（一番左）
-    DOWN_LOCAL:   -25, // 下り 普通
-    UP_LOCAL:      25, // 上り 普通
-    UP_EXPRESS:    55  // 上り 優等（一番右）
+    // 画面左側（下り：Down）
+    DOWN_EXPRESS: -55, // 一番左
+    DOWN_LOCAL:   -25, // 左から2番目
+    // 画面右側（上り：Up）
+    UP_LOCAL:      25, // 右から2番目
+    UP_EXPRESS:    55  // 一番右
 };
 
 const getXY = (p, isBranch, train = null) => {
     const route = state.unifiedRoutes[state.selectedIdx];
-    // 支線フラグが真、かつ分岐点以降の駅であれば X=600、それ以外は X=400
+    // 中心線の決定
     let baseX = (isBranch && p > route.splitIdx) ? 600 : 400;
     let xOffset = 0;
 
     if (train) {
+        // 方向と種別によるレーン選択
         if (train.direction === "down") {
             xOffset = train.isExpress ? LANES.DOWN_EXPRESS : LANES.DOWN_LOCAL;
         } else {
+            // 上り(Up)は必ず右側のレーン（正の数値）へ
             xOffset = train.isExpress ? LANES.UP_EXPRESS : LANES.UP_LOCAL;
+        }
+
+        // --- 重なり対策 ---
+        // 同じレーン(xOffset)で、位置(pos)が極めて近い列車がいるかチェック
+        const collision = state.trains.find(other => 
+            other !== train && 
+            other.direction === train.direction &&
+            Math.abs(other.pos - train.pos) < 0.15 // 0.15駅分以内に接近している場合
+        );
+        if (collision) {
+            // わずかに右へずらして重なりを回避
+            xOffset += (train.pos > collision.pos ? 8 : -8);
         }
     }
     return { x: baseX + xOffset, y: (p + 1) * 90 };
@@ -228,24 +244,24 @@ function render() {
 
     let draw = "";
     
-    // 背景の4線路（ガイドライン）
+    // 背景の4線路（左側2本、右側2本）
     const drawTracks = (bx, count, startP = 0) => {
         Object.values(LANES).forEach(offset => {
             const y1 = (startP + 1) * S;
-            const y2 = (startP + count) * S;
-            draw += `<line x1="${bx+offset}" y1="${y1}" x2="${bx+offset}" y2="${y2}" stroke="white" stroke-width="1" opacity="0.05" />`;
+            const y2 = (startP + count + startP) * S;
+            draw += `<line x1="${bx+offset}" y1="${y1}" x2="${bx+offset}" y2="${y2}" stroke="white" stroke-width="1" opacity="0.1" />`;
         });
     };
     drawTracks(400, route.backbone.length);
     if(route.branchStations.length > 0) drawTracks(600, route.branchStations.length, route.splitIdx + 1);
 
-    // 駅の描画
+    // 駅の描画（中心に配置）
     const renderStations = (sts, isBranch, startIdx = 0) => {
         sts.forEach((sId, i) => {
-            const p = getXY(i + startIdx, isBranch);
-            draw += `<rect x="${p.x - 70}" y="${p.y - 3}" width="140" height="6" fill="#475569" rx="2" />`;
+            const p = getXY(i + startIdx, isBranch); // trainなしで呼ぶと中心(400/600)が返る
+            draw += `<rect x="${p.x - 75}" y="${p.y - 3}" width="150" height="6" fill="#334155" rx="2" />`;
             draw += `<circle cx="${p.x}" cy="${p.y}" r="6" fill="${route.color}" stroke="white" stroke-width="2"/>`;
-            draw += `<text class="station-label" x="${p.x - 80}" y="${p.y + 5}" text-anchor="end">${clean(state.stationMap[sId.split('_')[0]])}</text>`;
+            draw += `<text class="station-label" x="${p.x - 85}" y="${p.y + 5}" text-anchor="end">${clean(state.stationMap[sId.split('_')[0]])}</text>`;
         });
     };
     renderStations(route.backbone, false);
@@ -254,7 +270,7 @@ function render() {
     // 列車の描画
     state.trains.forEach((t, i) => {
         const p = getXY(t.pos, t.isBranch, t);
-        const [mainType, subType] = t.service.split('|'); // 種別を分割
+        const [mainType, subType] = t.service.split('|');
         
         draw += `
         <g transform="translate(${p.x}, ${p.y})" style="cursor:pointer" onclick="showDetail(${i})">
@@ -262,9 +278,9 @@ function render() {
             <rect x="-24" y="-42" width="48" height="24" rx="4" fill="${t.isExpress ? '#ef4444' : '#3b82f6'}" opacity="0.9"/>
             <text x="0" y="-31" fill="white" text-anchor="middle" font-weight="bold">
                 <tspan x="0" font-size="10">${mainType || ""}</tspan>
-                <tspan x="0" dy="10" font-size="7" opacity="0.8">${subType || ""}</tspan>
+                <tspan x="0" dy="10" font-size="7" opacity="0.9">${subType || ""}</tspan>
             </text>
-            <text x="0" y="38" fill="white" font-size="11" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:3px">${t.dest}</text>
+            <text x="0" y="38" fill="white" font-size="11" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:4px">${t.dest}</text>
         </g>`;
     });
 
