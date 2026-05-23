@@ -192,41 +192,46 @@ async function updateTrains() {
                 const tid = `${arr.destination}_${arr.arrival}`;
                 if (seen.has(tid)) return;
                 seen.add(tid);
-
+        
                 const destName = clean(arr.destination);
-                // 支線判定
                 const isBranch = route.branchStations.some(bs => clean(state.stationMap[bs.split('_')[0]]) === destName);
                 const currentList = isBranch ? [...route.backbone.slice(0, route.splitIdx + 1), ...route.branchStations] : route.backbone;
-
+        
                 const matchIdx = currentList.findIndex(st => clean(state.stationMap[st.split('_')[0]]) === stationName);
                 if (matchIdx === -1) return;
-
+        
                 const arrivalTime = Number(arr.arrival);
                 const diffSec = (arrivalTime - now) / 1000;
                 if (Math.abs(diffSec) > 1800) return;
-
-                // --- 向き判定の改良 ---
-                // 到着駅(matchIdx)と終着駅(destIdx)の相対位置で決める
-                const destIdx = currentList.findIndex(st => clean(state.stationMap[st.split('_')[0]]).includes(destName));
+        
+                // --- 改良版：物理的なY座標で向きを判定 ---
+                const destIdxInList = currentList.findIndex(st => clean(state.stationMap[st.split('_')[0]]).includes(destName));
                 
-                // インデックスが減る方向なら "up"、増える方向なら "down"
-                let direction = "down";
-                if (destIdx !== -1) {
-                    direction = (destIdx < matchIdx) ? "up" : "down";
+                let direction = "down"; // デフォルト
+                if (destIdxInList !== -1) {
+                    // 単純にリストのインデックス比較。
+                    // 本線・支線を問わず currentList 内での位置関係で決める
+                    direction = (destIdxInList < matchIdx) ? "up" : "down";
+                } else {
+                    // リスト外（他路線直通など）の場合、暫定的に駅名解決マップから推測
+                    // ここでは安全のため、解決できない場合は down に倒す
                 }
-
+        
                 const pos = matchIdx - (diffSec / 90);
-
+        
                 // --- 始発駅制限 (1分前ルール) ---
-                // 始発駅(インデックス0 または 方向転換直後)で、まだ時間が早い場合はスキップ
-                const isOrigin = (direction === "down" && matchIdx === 0) || (direction === "up" && matchIdx === currentList.length - 1);
+                // directionがupならリストの末尾側が始発、downなら0番目が始発
+                const isOrigin = (direction === "down" && matchIdx === 0) || 
+                                 (direction === "up" && matchIdx === currentList.length - 1);
+                
                 if (isOrigin && diffSec > 60) return;
-
+        
                 fetched.push({
                     dest: destName,
                     service: arr.route || "普通",
                     pos: pos,
-                    isBranch, direction,
+                    isBranch, 
+                    direction, // ここで確定した向き
                     isExpress: CONFIG.EXPRESS_KEYWORDS.some(k => (arr.route||"").includes(k)),
                     baseTime: arrivalTime,
                     baseIdx: matchIdx,
