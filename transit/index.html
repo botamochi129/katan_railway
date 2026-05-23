@@ -48,6 +48,21 @@ const LANES = {
     UP_EXPRESS:    55  // 上り 優等（一番右）
 };
 
+const getXY = (p, isBranch, train = null) => {
+    const route = state.unifiedRoutes[state.selectedIdx];
+    let baseX = (isBranch && p > route.splitIdx) ? 600 : 400;
+    let xOffset = 0;
+
+    if (train) {
+        if (train.direction === "down") {
+            xOffset = train.isExpress ? LANES.DOWN_EXPRESS : LANES.DOWN_LOCAL;
+        } else {
+            xOffset = train.isExpress ? LANES.UP_EXPRESS : LANES.UP_LOCAL;
+        }
+    }
+    return { x: baseX + xOffset, y: (p + 1) * 90 };
+};
+
 let state = { stationMap: {}, unifiedRoutes: [], selectedIdx: 0, trains: [] };
 const clean = (s) => String(s || "").split('|')[0].split('||')[0].trim();
 
