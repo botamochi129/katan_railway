@@ -42,16 +42,18 @@ const CONFIG = {
 };
 
 const LANES = {
-    UP_EXPRESS:   -70,
-    UP_LOCAL:     -35,
-    DOWN_LOCAL:    35,
-    DOWN_EXPRESS:  70
+    UP_EXPRESS:   -80, // 最も左
+    UP_LOCAL:     -45, // 左から2番目
+    // 0 = 中心線
+    DOWN_LOCAL:    45, // 右から2番目
+    DOWN_EXPRESS:  80  // 最も右
 };
 
 const getXY = (p, isBranch, train = null) => {
     const route = state.unifiedRoutes[state.selectedIdx];
-    let baseX = (train && train.isBranch && p > route.splitIdx) ? 750 : 450;
-    if (!train && isBranch && p > route.splitIdx) baseX = 750;
+    // 中心線の位置（駅名ラベルがあるため本線は450、支線は800と広めに取る）
+    let baseX = (train && train.isBranch && p > route.splitIdx) ? 800 : 450;
+    if (!train && isBranch && p > route.splitIdx) baseX = 800;
 
     let xOffset = 0;
     if (train) {
@@ -60,20 +62,12 @@ const getXY = (p, isBranch, train = null) => {
         } else {
             xOffset = train.isExpress ? LANES.DOWN_EXPRESS : LANES.DOWN_LOCAL;
         }
-
-        // --- 物理的な重なり検知 ---
-        // 同じ駅(pos)で、同じレーン(xOffset)にいる他の列車を探す
-        const overlap = state.trains.find(other => 
-            other !== train && 
-            Math.abs(other.pos - p) < 0.1 && // ほぼ同じ位置
-            other.direction === train.direction &&
-            other.isExpress === train.isExpress &&
-            other.renderedX !== undefined // 既に描画位置が決まっている
+        
+        // 重なり対策（微調整）
+        const collision = state.trains.find(other => 
+            other !== train && Math.abs(other.pos - p) < 0.12 && other.direction === train.direction && other.isExpress === train.isExpress
         );
-        if (overlap) {
-            xOffset += 12; // 重なっている場合は少し右にずらす
-        }
-        train.renderedX = baseX + xOffset; // 判定用に保存
+        if (collision) xOffset += 10; 
     }
     
     return { x: baseX + xOffset, y: (p + 1) * 90 };
