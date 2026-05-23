@@ -50,19 +50,17 @@ const LANES = {
 
 const getXY = (p, isBranch, train = null) => {
     const route = state.unifiedRoutes[state.selectedIdx];
-    // 本線は400、支線は600を「中心線」とする
+    // 支線フラグが真、かつ分岐点以降の駅であれば X=600、それ以外は X=400
     let baseX = (isBranch && p > route.splitIdx) ? 600 : 400;
     let xOffset = 0;
 
     if (train) {
-        // trainがある場合のみ、LANESに基づいたオフセットを適用
         if (train.direction === "down") {
             xOffset = train.isExpress ? LANES.DOWN_EXPRESS : LANES.DOWN_LOCAL;
         } else {
             xOffset = train.isExpress ? LANES.UP_EXPRESS : LANES.UP_LOCAL;
         }
     }
-    // y座標は共通
     return { x: baseX + xOffset, y: (p + 1) * 90 };
 };
 
@@ -230,45 +228,42 @@ function render() {
 
     let draw = "";
     
-    // 背景の4線路（各レーンに縦線を引く）
-    const drawTracks = (bx, startIndex, count) => {
+    // 背景の4線路（ガイドライン）
+    const drawTracks = (bx, count, startP = 0) => {
         Object.values(LANES).forEach(offset => {
-            const startY = (startIndex + 1) * S;
-            const endY = (startIndex + count) * S;
-            draw += `<line x1="${bx+offset}" y1="${startY}" x2="${bx+offset}" y2="${endY}" stroke="white" stroke-width="1" opacity="0.1" />`;
+            const y1 = (startP + 1) * S;
+            const y2 = (startP + count) * S;
+            draw += `<line x1="${bx+offset}" y1="${y1}" x2="${bx+offset}" y2="${y2}" stroke="white" stroke-width="1" opacity="0.05" />`;
         });
     };
-    drawTracks(400, 0, route.backbone.length);
-    if(route.branchStations.length > 0) drawTracks(600, route.splitIdx + 1, route.branchStations.length);
+    drawTracks(400, route.backbone.length);
+    if(route.branchStations.length > 0) drawTracks(600, route.branchStations.length, route.splitIdx + 1);
 
-    // 駅（ホームと名前）の描画
+    // 駅の描画
     const renderStations = (sts, isBranch, startIdx = 0) => {
         sts.forEach((sId, i) => {
-            // ここでは train を渡さないので、p.x は常に baseX (400 or 600) になる
             const p = getXY(i + startIdx, isBranch);
-            
-            // ホーム（4列の線路をすべてまたぐように、中心から左右に広げる）
-            // LANESが -55～+55 なので、幅140pxあれば全てカバーできる
             draw += `<rect x="${p.x - 70}" y="${p.y - 3}" width="140" height="6" fill="#475569" rx="2" />`;
-            
-            // 駅の丸印（中心に配置）
             draw += `<circle cx="${p.x}" cy="${p.y}" r="6" fill="${route.color}" stroke="white" stroke-width="2"/>`;
-            
-            // 駅名ラベル（ホームの左側に配置）
             draw += `<text class="station-label" x="${p.x - 80}" y="${p.y + 5}" text-anchor="end">${clean(state.stationMap[sId.split('_')[0]])}</text>`;
         });
     };
     renderStations(route.backbone, false);
     renderStations(route.branchStations, true, route.splitIdx + 1);
 
-    // 列車（4列に振り分け）
+    // 列車の描画
     state.trains.forEach((t, i) => {
-        const p = getXY(t.pos, t.isBranch, t); // ここで train を渡すので、t.direction 等に基づき左右にずれる
+        const p = getXY(t.pos, t.isBranch, t);
+        const [mainType, subType] = t.service.split('|'); // 種別を分割
+        
         draw += `
         <g transform="translate(${p.x}, ${p.y})" style="cursor:pointer" onclick="showDetail(${i})">
             <image href="${CONFIG.TRAIN_IMG}" x="-22" y="-22" width="44" height="44" />
-            <rect x="-22" y="-38" width="44" height="14" rx="3" fill="${t.isExpress ? '#ef4444' : '#3b82f6'}" opacity="0.9"/>
-            <text x="0" y="-27" fill="white" font-size="9" font-weight="bold" text-anchor="middle">${t.service}</text>
+            <rect x="-24" y="-42" width="48" height="24" rx="4" fill="${t.isExpress ? '#ef4444' : '#3b82f6'}" opacity="0.9"/>
+            <text x="0" y="-31" fill="white" text-anchor="middle" font-weight="bold">
+                <tspan x="0" font-size="10">${mainType || ""}</tspan>
+                <tspan x="0" dy="10" font-size="7" opacity="0.8">${subType || ""}</tspan>
+            </text>
             <text x="0" y="38" fill="white" font-size="11" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:3px">${t.dest}</text>
         </g>`;
     });
