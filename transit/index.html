@@ -90,8 +90,8 @@ async function init() {
                 <div style="font-size:10px;color:#94a3b8;margin-top:4px">${r.matchFullNames.length} 系統登録済み</div>
             </div>
         `).join("");
-        
         if(state.unifiedRoutes.length > 0) selectRoute(0);
+        poll();
         console.log("--- 初期化完了 ---");
     } catch(e) {
         console.error("初期化エラー:", e);
@@ -273,38 +273,55 @@ function selectRoute(i) {
     updateTrains();
 }
 
+async function poll() {
+    await updateTrains();
+    setTimeout(poll, 7000); // 処理完了から7秒後に次を実行
+}
+
+// --- 時刻表表示の修正（方向による正負の調整） ---
 window.showDetail = (trainIdx) => {
     const t = state.trains[trainIdx];
-    const route = state.unifiedRoutes[state.selectedIdx];
+    if (!t) return;
     
-    let html = `<div style="padding:10px; background:rgba(255,255,255,0.05); border-radius:8px;">`;
+    let html = `<div style="padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; position:sticky; top:0; background:var(--panel); z-index:10; border-bottom:1px solid var(--line);">`;
+    html += `<div style="display:flex; justify-content:space-between; align-items:center;">`;
     html += `<strong style="color:var(--accent); font-size:16px;">${t.service} ${t.dest} 行</strong>`;
-    html += `<table style="width:100%; margin-top:10px; font-size:13px; border-collapse:collapse;">`;
+    html += `<span style="font-size:10px; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">${t.direction === 'up' ? '上り' : '下り'}</span>`;
+    html += `</div></div>`;
+    
+    html += `<table style="width:100%; font-size:13px; border-collapse:collapse;">`;
 
     t.stations.forEach((sId, i) => {
         const sName = clean(state.stationMap[sId.split('_')[0]]);
         
-        // 所要時間(durations)がある場合はそれを使用、なければ90秒固定
-        // Backbone順序に合わせて durations[i] を加減算する
-        const timeDiff = (i - t.baseIdx) * 90000; 
+        // 基準駅(baseIdx)からの駅数差分。
+        // 上り(up)の場合は駅順が若くなる方向へ進むため、符号を調整
+        const stationDiff = i - t.baseIdx;
+        const timeMultiplier = (t.direction === "up") ? -1 : 1;
+        
+        // 推定時刻 = 基準時刻 + (駅間隔 * 90秒 * 方向係数)
+        const timeDiff = stationDiff * 90000; 
         const estTime = new Date(t.baseTime + timeDiff);
         const timeStr = estTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
         const isCurrent = (i === t.baseIdx);
-        const isPassed = (estTime.getTime() < Date.now());
+        const isPassed = (estTime.getTime() < Date.now() - 30000); // 30秒余裕を持たせて「通過済み」判定
 
         html += `
-            <tr style="border-bottom:1px solid #2a3452; opacity:${isPassed ? 0.4 : 1}; ${isCurrent ? 'background:rgba(14,165,233,0.2)' : ''}">
-                <td style="padding:8px;">${isCurrent ? '▶' : ''} ${sName}</td>
-                <td style="text-align:right; padding:8px;">${timeStr}</td>
+            <tr style="border-bottom:1px solid #2a3452; opacity:${isPassed ? 0.4 : 1}; ${isCurrent ? 'background:rgba(14,165,233,0.15)' : ''}">
+                <td style="padding:10px;">
+                    <span style="display:inline-block; width:20px;">${isCurrent ? '▶' : ''}</span>
+                    ${sName}
+                </td>
+                <td style="text-align:right; padding:10px; font-family:monospace;">${timeStr}</td>
             </tr>`;
     });
-    html += `</table></div>`;
+    html += `</table>`;
     document.getElementById("details").innerHTML = html;
 };
 
 init();
-setInterval(updateTrains, 7000); // サーバー負荷軽減のため7秒間隔
+//setInterval(updateTrains, 7000); // サーバー負荷軽減のため7秒間隔
 </script>
 </body>
 </html>
