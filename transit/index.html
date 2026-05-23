@@ -214,44 +214,76 @@ function render() {
     const svg = document.getElementById("svgMap");
     if (!route) return;
 
-    const S = 90;
+    const S = 90; // 駅の間隔
     const h = (Math.max(route.backbone.length, route.splitIdx + route.branchStations.length) + 2) * S;
     svg.setAttribute("viewBox", `0 0 1000 ${h}`);
     svg.style.height = h + "px";
 
-    const getXY = (p, isBranch) => {
-        if (!isBranch || p <= route.splitIdx) return { x: 400, y: (p + 1) * S };
-        return { x: 600, y: (p + 1) * S };
+    // --- 座標計算の強化版 ---
+    const getXY = (p, isBranch, train = null) => {
+        let baseX = isBranch && p > route.splitIdx ? 600 : 400;
+        let xOffset = 0;
+
+        if (train) {
+            // 1. 方向による左右振り分け (左側通行)
+            // 下り(down): 左側 / 上り(up): 右側
+            const dirSide = (train.direction === "down") ? -1 : 1;
+            
+            // 2. 種別による幅の調整
+            // 普通は内側(15px), 優等(快速・急行等)は外側(45px)
+            const typeDist = train.isExpress ? 45 : 15;
+            
+            xOffset = dirSide * typeDist;
+        }
+
+        return { x: baseX + xOffset, y: (p + 1) * S };
     };
 
     let draw = "";
-    draw += `<path d="M 400 ${S} L 400 ${route.backbone.length*S}" stroke="${route.color}" stroke-width="10" fill="none" opacity="0.3"/>`;
-    if (route.branchStations.length > 0) {
-        draw += `<path d="M 400 ${(route.splitIdx+1)*S} L 600 ${(route.splitIdx+2)*S} L 600 ${(route.splitIdx+route.branchStations.length+1)*S}" stroke="${route.color}" stroke-width="6" fill="none" stroke-dasharray="8,4" opacity="0.4"/>`;
-    }
+    
+    // --- 背景の線路（複線感を出すために2本引く） ---
+    const drawTrack = (startX, stations, isBranch) => {
+        // 下り線(左)と上り線(右)のガイド
+        [-15, 15].forEach(off => {
+            let path = `M ${startX + off} ${S}`;
+            stations.forEach((_, i) => {
+                const p = getXY(i + (isBranch ? route.splitIdx + 1 : 0), isBranch);
+                path += ` L ${startX + off} ${p.y}`;
+            });
+            draw += `<path d="${path}" stroke="${route.color}" stroke-width="2" fill="none" opacity="0.1"/>`;
+        });
+    };
+    drawTrack(400, route.backbone, false);
+    if (route.branchStations.length > 0) drawTrack(600, route.branchStations, true);
 
+    // --- 駅の描画 ---
     route.backbone.forEach((s, i) => {
         const p = getXY(i, false);
+        draw += `<rect x="${p.x - 25}" y="${p.y - 2}" width="50" height="4" fill="${route.color}" opacity="0.5"/>`; // ホームっぽく
         draw += `<circle cx="${p.x}" cy="${p.y}" r="6" fill="${route.color}" stroke="white" stroke-width="2"/>`;
-        draw += `<text class="station-label" x="${p.x-15}" y="${p.y+5}" text-anchor="end">${clean(state.stationMap[s.split('_')[0]])}</text>`;
+        draw += `<text class="station-label" x="${p.x - 35}" y="${p.y + 5}" text-anchor="end">${clean(state.stationMap[s.split('_')[0]])}</text>`;
     });
     route.branchStations.forEach((s, i) => {
         const p = getXY(route.splitIdx + 1 + i, true);
+        draw += `<rect x="${p.x - 20}" y="${p.y - 2}" width="40" height="4" fill="${route.color}" opacity="0.5"/>`;
         draw += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="${route.color}" stroke="white" stroke-width="1"/>`;
-        draw += `<text class="station-label" x="${p.x+15}" y="${p.y+5}">${clean(state.stationMap[s.split('_')[0]])}</text>`;
+        draw += `<text class="station-label" x="${p.x + 30}" y="${p.y + 5}">${clean(state.stationMap[s.split('_')[0]])}</text>`;
     });
 
+    // --- 列車アイコンの描画 ---
     state.trains.forEach(t => {
-        const p = getXY(t.pos, t.isBranch);
-        const xSide = t.direction === "up" ? -45 : 45;
+        const p = getXY(t.pos, t.isBranch, t); // 列車情報を渡してオフセット計算
+        
+        // アイコンの向きを進行方向によって少し傾けるなどの演出も可能ですが、まずは位置のみ
         draw += `
-        <g transform="translate(${p.x + xSide}, ${p.y})">
-            <image href="${CONFIG.TRAIN_IMG}" x="-25" y="-25" width="50" height="50" />
-            <rect x="-22" y="-40" width="44" height="14" rx="3" fill="${t.isExpress?'#ef4444':'#3b82f6'}" opacity="0.9"/>
-            <text x="0" y="-29" fill="white" font-size="9" font-weight="bold" text-anchor="middle">${t.service}</text>
-            <text x="0" y="40" fill="white" font-size="11" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:3px">${t.dest}</text>
+        <g transform="translate(${p.x}, ${p.y})">
+            <image href="${CONFIG.TRAIN_IMG}" x="-22" y="-22" width="44" height="44" />
+            <rect x="-22" y="-38" width="44" height="14" rx="3" fill="${t.isExpress ? '#ef4444' : '#3b82f6'}" opacity="0.9"/>
+            <text x="0" y="-27" fill="white" font-size="9" font-weight="bold" text-anchor="middle">${t.service}</text>
+            <text x="0" y="38" fill="white" font-size="11" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:3px">${t.dest}</text>
         </g>`;
     });
+
     svg.innerHTML = draw;
 }
 
