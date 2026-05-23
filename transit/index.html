@@ -2,43 +2,33 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>勝炭鉄道 Transit Viewer Pro</title>
+<title>勝炭鉄道 Transit Viewer Pro v3</title>
 <style>
-:root{--bg:#0b1120;--panel:#151c2c;--line:#2a3452;--ink:#e2e8f0;--muted:#94a3b8;--accent:#0ea5e9}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:sans-serif;overflow:hidden}
+:root{--bg:#0b1120;--panel:#151c2c;--line:#2a3452;--ink:#e2e8f0;--accent:#0ea5e9}
+body{background:var(--bg);color:var(--ink);font-family:sans-serif;margin:0;overflow:hidden}
 .layout{display:grid;grid-template-columns:280px 1fr;height:100vh}
-.sidebar{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:15px}
+.sidebar{background:var(--panel);border-right:1px solid var(--line);padding:15px;overflow-y:auto}
 .main{display:grid;grid-template-rows:60px 1fr 180px;overflow:hidden}
-header{padding:0 20px;display:flex;align-items:center;border-bottom:1px solid var(--line);justify-content:space-between;background:#0b1120}
-.map-area{overflow:auto;background:#0f172a;position:relative}
-.details{background:var(--panel);border-top:1px solid var(--line);padding:15px;overflow-y:auto;font-size:13px}
-.route-card{padding:12px;border-radius:8px;margin-bottom:8px;cursor:pointer;border:1px solid transparent;background:rgba(255,255,255,0.03)}
-.route-card.active{border-color:var(--accent);background:rgba(14,165,233,0.15)}
-svg{display:block;background-image: radial-gradient(#1e293b 0.5px, transparent 0.5px);background-size: 30px 30px;}
-.station-node{fill:#0f172a;stroke-width:3}
-.station-label{fill:white;font-size:13px;font-weight:bold;paint-order: stroke;stroke: #0f172a;stroke-width: 3px;}
-#status{font-size:12px}
-.ok{color:#10b981}
+header{padding:0 20px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#0b1120;font-weight:bold}
+.map-area{overflow:auto;background:#0f172a}
+.details{background:var(--panel);border-top:1px solid var(--line);padding:15px;overflow-y:auto}
+.route-card{padding:12px;border-radius:8px;margin-bottom:8px;cursor:pointer;background:rgba(255,255,255,0.03);border:1px solid transparent}
+.route-card.active{border-color:var(--accent);background:rgba(14,165,233,0.1)}
+svg{display:block}
+.station-label{fill:white;font-size:12px;paint-order:stroke;stroke:#0f172a;stroke-width:3px}
+#status{font-size:11px;margin-left:auto;color:#10b981}
 </style>
 </head>
 <body>
 <div class="layout">
     <aside class="sidebar">
-        <h2 style="font-size:18px;margin-bottom:15px">勝炭鉄道 Viewer</h2>
+        <h2 style="font-size:16px;margin-bottom:15px">勝炭鉄道 運行情報</h2>
         <div id="routeList"></div>
     </aside>
     <main class="main">
-        <header>
-            <div id="currentRouteName" style="font-weight:bold">路線を選択してください</div>
-            <div id="status">読込中...</div>
-        </header>
-        <div class="map-area" id="mapArea">
-            <svg id="svgMap"></svg>
-        </div>
-        <div class="details" id="details">
-            <p style="color:var(--muted)">列車を選択すると予測時刻表が表示されます。</p>
-        </div>
+        <header><span id="currentRouteName">路線を選択</span><div id="status">接続中</div></header>
+        <div class="map-area"><svg id="svgMap"></svg></div>
+        <div class="details" id="details">列車を選択してください</div>
     </main>
 </div>
 
@@ -47,68 +37,58 @@ const CONFIG = {
     DATA_API: "/api/data",
     ARRIVALS_API: "/api/arrivals",
     TRAIN_IMG: "/assets/kr3000.png",
-    // 検索用フルネーム
     KEYWORDS: ["勝炭鉄道 城刈線", "勝炭鉄道 氷原線", "勝炭鉄道 条先周線", "樽尾線"],
-    EXPRESS_KEYWORDS: ["快速", "特急", "急行", "新快", "通勤"]
+    EXPRESS_KEYWORDS: ["快速", "特急", "急行"]
 };
 
 let state = { stationMap: {}, unifiedRoutes: [], selectedIdx: 0, trains: [] };
+const norm = (s) => String(s || "").split('|')[0].split('||')[0].trim();
 
-function norm(s) { return String(s || "").split('|')[0].split('||')[0].trim(); }
-
-// --- 路線統合・解析 ---
+// --- 路線統合エンジン ---
 function parseData(data) {
     const sMap = {};
-    const walkStations = (o) => {
+    const walkS = (o) => {
         if (!o || typeof o !== 'object') return;
-        if (o.stations && typeof o.stations === 'object' && !Array.isArray(o.stations)) {
-            Object.entries(o.stations).forEach(([id, s]) => { sMap[id.split('_')[0]] = s.name || s.nameJa; });
-        } else if (Array.isArray(o.stations)) {
-            o.stations.forEach(s => { if(s.id) sMap[s.id.split('_')[0]] = s.name; });
-        }
-        Object.values(o).forEach(v => v && typeof v === 'object' && walkStations(v));
+        if (o.stations) Object.entries(o.stations).forEach(([id, s]) => { sMap[id.split('_')[0]] = s.name || s.nameJa; });
+        Object.values(o).forEach(walkS);
     };
-    walkStations(data);
+    walkS(data);
     state.stationMap = sMap;
 
     const groups = {};
-    const walkRoutes = (o) => {
+    const walkR = (o) => {
         if (!o || typeof o !== 'object') return;
-        if (Array.isArray(o.routes)) {
-            o.routes.forEach(r => {
-                const matchedKey = CONFIG.KEYWORDS.find(k => r.name.includes(k));
-                if (!matchedKey) return;
-                
-                // タブ表示用に "勝炭鉄道 " を除去
-                const displayName = matchedKey.replace("勝炭鉄道 ", "");
-                if (!groups[displayName]) {
-                    groups[displayName] = { name: displayName, fullName: matchedKey, color: `#${(r.color >>> 0).toString(16).padStart(6,'0')}`, routes: [] };
-                }
-                groups[displayName].routes.push(r);
-            });
-        }
-        Object.values(o).forEach(v => v && typeof v === 'object' && walkRoutes(v));
+        if (o.routes) o.routes.forEach(r => {
+            const k = CONFIG.KEYWORDS.find(key => r.name.includes(key));
+            if (!k) return;
+            const dName = k.replace("勝炭鉄道 ", "");
+            if (!groups[dName]) groups[dName] = { name: dName, fullName: k, color: `#${(r.color >>> 0).toString(16).padStart(6,'0')}`, routes: [] };
+            groups[dName].routes.push(r);
+        });
+        Object.values(o).forEach(walkR);
     };
-    walkRoutes(data);
+    walkR(data);
 
     state.unifiedRoutes = Object.values(groups).map(g => {
-        const sorted = g.routes.sort((a, b) => b.stations.length - a.stations.length);
-        const backbone = sorted[0].stations; // A-Z (メイン)
+        const sorted = g.routes.sort((a,b) => b.stations.length - a.stations.length);
+        const backbone = sorted[0].stations; // A-Z基準
         
-        // 分岐(α線)の検出
-        let splitIdx = backbone.length;
         let branchStations = [];
-        // backboneに含まれない駅を持つ系統を探す
-        const branchRoute = sorted.find(r => r.stations.some(s => !backbone.includes(s)));
-        if (branchRoute) {
-            for (let i = 0; i < branchRoute.stations.length; i++) {
-                if (!backbone.includes(branchRoute.stations[i])) {
-                    splitIdx = i - 1; // 分岐駅 O
-                    branchStations = branchRoute.stations.slice(i);
-                    break;
+        let splitIdx = backbone.length;
+
+        g.routes.forEach(r => {
+            // 反転チェック: もし逆順(Z→Aやα→A)なら一時的に反転させて比較
+            let sts = [...r.stations];
+            const isReverse = backbone.indexOf(sts[sts.length-1]) < backbone.indexOf(sts[0]) && backbone.includes(sts[sts.length-1]);
+            if (isReverse) sts.reverse();
+
+            sts.forEach((sId, i) => {
+                if (!backbone.includes(sId) && !branchStations.includes(sId)) {
+                    if (splitIdx === backbone.length) splitIdx = backbone.indexOf(sts[i-1]);
+                    branchStations.push(sId);
                 }
-            }
-        }
+            });
+        });
 
         return { 
             name: g.name, fullName: g.fullName, color: g.color, 
@@ -117,161 +97,147 @@ function parseData(data) {
         };
     });
 }
+// --- 1. 柔軟な名前照合関数 ---
+// 路線名が「勝炭鉄道 城刈線」を含んでいるか、
+// または「城刈線」というキーワードがデータ側に含まれているかを確認
+const isTargetRoute = (dataRouteName, targetFullName) => {
+    const d = norm(dataRouteName);
+    const t = targetFullName; // 例: "勝炭鉄道 城刈線"
+    const shortT = t.replace("勝炭鉄道 ", ""); // 例: "城刈線"
+    return d.includes(t) || d.includes(shortT);
+};
 
-// --- 列車位置取得 ---
+// --- 2. 列車位置計算ロジック (改良版) ---
 async function updateTrains() {
     const route = state.unifiedRoutes[state.selectedIdx];
     if (!route) return;
 
-    const pollStations = [
-        route.backbone[0], 
-        route.backbone[Math.floor(route.backbone.length/2)], 
-        route.backbone[route.backbone.length-1]
-    ];
-    if (route.branchStations.length > 0) pollStations.push(route.branchStations[route.branchStations.length-1]);
-
-    const fetchedTrains = [];
-    const seen = new Set();
+    // 全駅スキャン (表示漏れを完全に防ぐ)
+    const scanIds = [...new Set([...route.backbone, ...route.branchStations])];
     const now = Date.now();
+    const fetched = [];
+    const seen = new Set();
 
-    await Promise.all([...new Set(pollStations)].map(async (s) => {
+    await Promise.all(scanIds.map(async (sId) => {
         try {
-            const res = await fetch(`${CONFIG.ARRIVALS_API}?stationId=${s.split('_')[0]}&worldIndex=0`);
-            const arrivals = await res.json();
-            if (!Array.isArray(arrivals)) return;
+            const res = await fetch(`${CONFIG.ARRIVALS_API}?stationId=${sId.split('_')[0]}&worldIndex=0`);
+            const data = await res.json();
+            if (!Array.isArray(data)) return;
 
-            arrivals.forEach(arr => {
-                // フルネームで判定
-                if (!norm(arr.route).includes(route.fullName) && !route.fullName.includes(norm(arr.route))) return;
+            data.forEach(arr => {
+                // 改良された照合ロジック
+                if (!isTargetRoute(arr.name, route.fullName)) return;
 
-                const key = `${arr.destination}_${arr.arrival}`;
-                if (seen.has(key)) return;
-                seen.add(key);
+                const tid = `${arr.destination}_${arr.arrival}`;
+                if (seen.has(tid)) return;
+                seen.add(tid);
 
-                // 行先から本線/支線判定
-                const isBranchTrain = route.branchStations.some(bs => norm(state.stationMap[bs.split('_')[0]]) === norm(arr.destination));
-                const currentList = isBranchTrain 
-                    ? [...route.backbone.slice(0, route.splitIdx + 1), ...route.branchStations]
+                // 行き先が路線図内にない（直通先など）場合は、
+                // 系統を特定するために「データ上の路線名」から方向を推測する
+                const isBranch = route.branchStations.some(bs => {
+                    const bsName = norm(state.stationMap[bs.split('_')[0]]);
+                    return norm(arr.name).includes(bsName) || norm(arr.destination).includes(bsName);
+                });
+
+                const currentList = isBranch 
+                    ? [...route.backbone.slice(0, route.splitIdx + 1), ...route.branchStations] 
                     : route.backbone;
 
-                // 時刻補完
-                const expected = new Array(currentList.length).fill(0);
-                const matchIdx = currentList.findIndex(st => norm(state.stationMap[st.split('_')[0]]) === norm(arr.station));
+                // 駅の特定
+                const matchIdx = currentList.findIndex(st => 
+                    norm(state.stationMap[st.split('_')[0]]) === norm(arr.station)
+                );
                 if (matchIdx === -1) return;
 
-                const arrTime = Number(arr.arrival);
-                expected[matchIdx] = arrTime;
-                // durationsに基づく補完 (無い場合は1分間隔)
-                for(let i = matchIdx + 1; i < currentList.length; i++) expected[i] = expected[i-1] + 60000;
-                for(let i = matchIdx - 1; i >= 0; i--) expected[i] = expected[i+1] - 60000;
+                // 到着までの秒数から位置を逆算
+                const arrivalTime = Number(arr.arrival);
+                const secondsToArrival = (arrivalTime - now) / 1000;
+                
+                // 1駅間を90秒と仮定して位置を補完 (durationsがある場合はそれを使うのがベスト)
+                let pos = matchIdx - (secondsToArrival / 90);
+                
+                // 画面外に消えすぎないようガード
+                if (pos < -1 || pos > currentList.length) return;
 
-                let pos = -1;
-                for(let i=0; i<expected.length-1; i++) {
-                    if (now >= expected[i] && now <= expected[i+1]) {
-                        pos = i + (now - expected[i]) / (expected[i+1] - expected[i]);
-                        break;
-                    }
-                }
-                if (now < expected[0]) pos = 0;
-                if (now > expected[expected.length-1]) pos = expected.length-1;
+                // 方向判定: データ上の destination がリストのどこにあるか。
+                // 見つからない（直通先）場合は、arrivalsデータの順序プロパティや
+                // 路線名の「真→新」などのキーワードから判定するロジックが必要ですが、
+                // ここでは「リストの末端に向かっているか」をデフォルトにします。
+                const destIdx = currentList.findIndex(st => 
+                    norm(state.stationMap[st.split('_')[0]]).includes(norm(arr.destination))
+                );
+                
+                // 方向: 終着駅がリストの前方なら Up, 後方なら Down
+                // 見つからない場合は arrivals のデータ構造から推測
+                const direction = (destIdx !== -1 && destIdx < matchIdx) ? "up" : "down";
 
-                // 方向判定: 終着駅インデックスとの比較
-                const destIdx = currentList.findIndex(st => norm(state.stationMap[st.split('_')[0]]) === norm(arr.destination));
-                const direction = (destIdx < pos) ? "up" : "down";
-
-                fetchedTrains.push({
-                    dest: norm(arr.destination),
-                    service: norm(arr.route).replace(route.fullName, "").replace(/[\[\]]/g, "").trim() || "各停",
-                    pos, isBranchTrain, direction,
-                    isExpress: CONFIG.EXPRESS_KEYWORDS.some(k => arr.route.includes(k)),
-                    expected, stationNames: currentList.map(st => norm(state.stationMap[st.split('_')[0]]))
+                fetched.push({
+                    dest: norm(arr.destination), // カスタム行き先をそのまま表示
+                    service: norm(arr.route) || "普通", // 新快速・快速などを反映
+                    pos: Math.max(0, pos),
+                    isBranch,
+                    direction,
+                    isExpress: CONFIG.EXPRESS_KEYWORDS.some(k => arr.route.includes(k))
                 });
             });
-        } catch(e) { console.error(e); }
+        } catch(e) {}
     }));
-    state.trains = fetchedTrains;
+
+    state.trains = fetched;
     render();
 }
-
-// --- 描画 ---
+// --- 描画エンジン ---
 function render() {
     const route = state.unifiedRoutes[state.selectedIdx];
     const svg = document.getElementById("svgMap");
     if (!route) return;
 
-    const S = 90; // 駅間隔
+    const S = 80; // 駅間隔
     const h = (Math.max(route.backbone.length, route.splitIdx + route.branchStations.length) + 2) * S;
     svg.setAttribute("viewBox", `0 0 1000 ${h}`);
     svg.style.height = h + "px";
 
     const getXY = (p, isBranch) => {
-        if (!isBranch || p <= route.splitIdx) return { x: 450, y: (p + 1) * S };
-        return { x: 600, y: (p + 1) * S };
+        if (!isBranch || p <= route.splitIdx) return { x: 400, y: (p + 1) * S };
+        return { x: 550, y: (p + 1) * S };
     };
 
-    let draw = "";
-    // 本線
-    draw += `<path d="M 450 ${S} L 450 ${(route.backbone.length)*S}" stroke="${route.color}" stroke-width="10" fill="none" opacity="0.3"/>`;
-    // 支線
+    let html = `<path d="M 400 ${S} L 400 ${route.backbone.length*S}" stroke="${route.color}" stroke-width="8" fill="none" opacity="0.2"/>`;
     if (route.branchStations.length > 0) {
-        draw += `<path d="M 450 ${(route.splitIdx+1)*S} L 600 ${(route.splitIdx+2)*S} L 600 ${(route.splitIdx + route.branchStations.length + 1)*S}" stroke="${route.color}" stroke-width="6" fill="none" stroke-dasharray="5,5" opacity="0.4"/>`;
+        html += `<path d="M 400 ${(route.splitIdx+1)*S} L 550 ${(route.splitIdx+2)*S} L 550 ${(route.splitIdx+route.branchStations.length+1)*S}" stroke="${route.color}" stroke-width="5" fill="none" stroke-dasharray="5,5" opacity="0.3"/>`;
     }
 
-    // 駅描画
+    // 駅名
     route.backbone.forEach((s, i) => {
         const p = getXY(i, false);
-        draw += `<circle class="station-node" cx="${p.x}" cy="${p.y}" r="6" stroke="${route.color}"/>`;
-        draw += `<text class="station-label" x="${p.x - 15}" y="${p.y + 5}" text-anchor="end">${norm(state.stationMap[s.split('_')[0]])}</text>`;
+        html += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="${route.color}"/><text class="station-label" x="${p.x-15}" y="${p.y+5}" text-anchor="end">${norm(state.stationMap[s.split('_')[0]])}</text>`;
     });
     route.branchStations.forEach((s, i) => {
         const p = getXY(route.splitIdx + 1 + i, true);
-        draw += `<circle class="station-node" cx="${p.x}" cy="${p.y}" r="5" stroke="${route.color}"/>`;
-        draw += `<text class="station-label" x="${p.x + 15}" y="${p.y + 5}">${norm(state.stationMap[s.split('_')[0]])}</text>`;
+        html += `<circle cx="${p.x}" cy="${p.y}" r="4" fill="${route.color}"/><text class="station-label" x="${p.x+15}" y="${p.y+5}">${norm(state.stationMap[s.split('_')[0]])}</text>`;
     });
 
-    // 列車描画
-    state.trains.forEach((t, idx) => {
-        const p = getXY(t.pos, t.isBranchTrain);
-        const xOffset = t.direction === "up" ? -40 : 40;
-        
-        draw += `
-        <g style="cursor:pointer" onclick="showDetail(${idx})" transform="translate(${p.x + xOffset}, ${p.y})">
-            <image href="${CONFIG.TRAIN_IMG}" x="-25" y="-25" width="50" height="50" />
-            <rect x="-20" y="-38" width="40" height="14" rx="3" fill="${t.isExpress?'#ef4444':'#3b82f6'}" opacity="0.8"/>
-            <text x="0" y="-27" fill="white" font-size="9" font-weight="bold" text-anchor="middle">${t.service}</text>
-            <text x="0" y="38" fill="white" font-size="10" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:3px">${t.dest}</text>
+    // 列車アイコン
+    state.trains.forEach(t => {
+        const p = getXY(t.pos, t.isBranch);
+        const xOffset = t.direction === "up" ? -35 : 35;
+        html += `
+        <g transform="translate(${p.x + xOffset}, ${p.y})">
+            <image href="${CONFIG.TRAIN_IMG}" x="-22" y="-22" width="44" height="44" />
+            <text x="0" y="35" fill="white" font-size="10" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:3px">${t.dest} (${t.service})</text>
         </g>`;
     });
 
-    svg.innerHTML = draw;
+    svg.innerHTML = html;
 }
 
-window.showDetail = (idx) => {
-    const t = state.trains[idx];
-    let html = `<h3>${t.service} | ${t.dest} 行</h3><div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:10px">`;
-    t.stationNames.forEach((name, i) => {
-        const time = new Date(t.expected[i]).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        const isPassed = Date.now() > t.expected[i];
-        html += `<div style="opacity:${isPassed?0.3:1}">${name}</div><div style="opacity:${isPassed?0.3:1}; text-align:right">${time}</div>`;
-    });
-    document.getElementById("details").innerHTML = html + `</div>`;
-};
-
 async function init() {
-    try {
-        const res = await fetch(CONFIG.DATA_API);
-        const data = await res.json();
-        parseData(data);
-        const list = document.getElementById("routeList");
-        list.innerHTML = state.unifiedRoutes.map((r, i) => `
-            <div class="route-card ${i===0?'active':''}" onclick="selectRoute(${i})">
-                <div style="width:30px;height:3px;background:${r.color};margin-bottom:5px"></div>
-                <div style="font-weight:bold;font-size:14px">${r.name}</div>
-            </div>
-        `).join("");
-        if(state.unifiedRoutes.length > 0) selectRoute(0);
-        document.getElementById("status").innerHTML = `<span class="ok">● 稼働中</span>`;
-    } catch(e) { document.getElementById("status").innerText = "エラー"; }
+    const res = await fetch(CONFIG.DATA_API);
+    const data = await res.json();
+    parseData(data);
+    const list = document.getElementById("routeList");
+    list.innerHTML = state.unifiedRoutes.map((r, i) => `<div class="route-card ${i===0?'active':''}" onclick="selectRoute(${i})"><b>${r.name}</b></div>`).join("");
+    if(state.unifiedRoutes.length > 0) selectRoute(0);
 }
 
 function selectRoute(i) {
