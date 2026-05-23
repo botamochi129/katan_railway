@@ -61,41 +61,71 @@ let state = {
 // --- 解析エンジン ---
 function norm(s) { return String(s || "").split('|')[0].split('||')[0].trim(); }
 
+// --- 解析エンジン（エラー修正版） ---
+function norm(s) { return String(s || "").split('|')[0].split('||')[0].trim(); }
+
 function parseData(data) {
-    // 1. 駅名解決
     const sMap = {};
-    const walk = (o) => {
+    
+    // 1. 駅名解決 (Object.values を使い、配列・オブジェクト両方に対応)
+    const walkStations = (o) => {
         if (!o || typeof o !== 'object') return;
-        if (o.stations) o.stations.forEach(s => { if(s.id && s.name) sMap[s.id.split('_')[0]] = s.name; });
-        Object.values(o).forEach(walk);
+        
+        // stations がオブジェクト(Map)の場合
+        if (o.stations && typeof o.stations === 'object' && !Array.isArray(o.stations)) {
+            Object.entries(o.stations).forEach(([id, s]) => {
+                const name = s.name || s.nameJa || s.n; // MTRのバージョンによる表記揺れ対応
+                if (name) sMap[id.split('_')[0]] = name;
+            });
+        } 
+        // stations が配列の場合
+        else if (Array.isArray(o.stations)) {
+            o.stations.forEach(s => {
+                if(s.id && s.name) sMap[s.id.split('_')[0]] = s.name;
+            });
+        }
+        
+        // 再帰的に探索
+        Object.values(o).forEach(v => {
+            if (v && typeof v === 'object') walkStations(v);
+        });
     };
-    walk(data);
+    walkStations(data);
     state.stationMap = sMap;
 
-    // 2. 路線合成・分岐検出
+    // 2. 路線合成
     const groups = {};
-    const walkR = (o) => {
+    const walkRoutes = (o) => {
         if (!o || typeof o !== 'object') return;
-        if (o.routes) o.routes.forEach(r => {
-            if (!CONFIG.KEYWORDS.some(k => r.name.includes(k))) return;
-            const bName = norm(r.name);
-            if (!groups[bName]) groups[bName] = { name: bName, color: `#${(r.color >>> 0).toString(16).padStart(6,'0')}`, routes: [] };
-            groups[bName].routes.push(r);
+        if (Array.isArray(o.routes)) {
+            o.routes.forEach(r => {
+                if (!CONFIG.KEYWORDS.some(k => r.name.includes(k))) return;
+                const bName = norm(r.name);
+                const hexColor = (r.color >>> 0).toString(16).padStart(6, '0');
+                if (!groups[bName]) groups[bName] = { name: bName, color: `#${hexColor}`, routes: [] };
+                groups[bName].routes.push(r);
+            });
+        }
+        Object.values(o).forEach(v => {
+            if (v && typeof v === 'object') walkRoutes(v);
         });
-        Object.values(o).forEach(walkR);
     };
-    walkR(data);
+    walkRoutes(data);
 
     state.unifiedRoutes = Object.values(groups).map(g => {
+        // 最も駅数が多い系統をメイン(Backbone)にする
         const sorted = g.routes.sort((a, b) => b.stations.length - a.stations.length);
         const backbone = [...sorted[0].stations];
         
-        // 分岐点(splitIdx)の特定
+        // 分岐点(splitIdx)の特定ロジック
+        // 全系統を比較し、共通しなくなる最初の駅を見つける
         let splitIdx = backbone.length;
         if (sorted.length > 1) {
             for (let i = 0; i < backbone.length; i++) {
-                if (sorted.some(r => r.stations[i] !== backbone[i])) {
-                    splitIdx = i; break;
+                const isCommon = sorted.every(r => r.stations[i] === backbone[i]);
+                if (!isCommon) {
+                    splitIdx = i - 1; // 共通している最後の駅
+                    break;
                 }
             }
         }
@@ -104,58 +134,75 @@ function parseData(data) {
             name: g.name, 
             color: g.color, 
             stations: backbone, 
-            splitIdx,
+            splitIdx: Math.max(0, splitIdx),
             durations: sorted[0].durations || [],
             rawRoutes: g.routes
         };
     });
 }
 
-// --- 位置計算エンジン ---
+// --- 位置計算エンジン (5点ポーリング & 補間) ---
 async function updateTrains() {
     const route = state.unifiedRoutes[state.selectedIdx];
-    if (!route) return;
+    if (!route || route.stations.length === 0) return;
 
-    // 1. 5点ポーリング駅の選定
+    // 5点ポーリング用の駅を選定
+    const pollStep = Math.max(1, Math.floor(route.stations.length / (CONFIG.POLL_COUNT - 1)));
     const pollIndices = [];
-    for(let i=0; i<CONFIG.POLL_COUNT; i++) {
-        pollIndices.push(Math.floor((route.stations.length - 1) * (i / (CONFIG.POLL_COUNT - 1))));
+    for(let i=0; i < CONFIG.POLL_COUNT; i++) {
+        const idx = Math.min(i * pollStep, route.stations.length - 1);
+        pollIndices.push(idx);
+        if (idx === route.stations.length - 1) break;
     }
 
     const fetchedTrains = [];
     const seen = new Set();
+    const now = Date.now();
 
-    await Promise.all(pollIndices.map(async (baseIdx) => {
+    await Promise.all([...new Set(pollIndices)].map(async (baseIdx) => {
         const sId = route.stations[baseIdx].split('_')[0];
         try {
+            // Vercelプロキシ経由で取得
             const res = await fetch(`${CONFIG.ARRIVALS_API}?stationId=${sId}&worldIndex=0`);
             const arrivals = await res.json();
 
+            if (!Array.isArray(arrivals)) return;
+
             arrivals.forEach(arr => {
-                if (!norm(arr.route).includes(route.name)) return;
+                // 路線名の柔軟な判定 ([快速] 等が入っていても通す)
+                const arrRouteName = norm(arr.route);
+                if (!arrRouteName.includes(route.name) && !route.name.includes(arrRouteName)) return;
+
                 const key = `${arr.destination}_${arr.arrival}`;
                 if (seen.has(key)) return;
                 seen.add(key);
 
-                // 全駅の予測時刻(expected)を計算
+                // 到着時刻から全駅の予測通過時刻を算出
                 const expected = new Array(route.stations.length).fill(0);
                 expected[baseIdx] = Number(arr.arrival);
                 
-                // baseIdxから前後に時間を伝播
-                for(let i = baseIdx + 1; i < route.stations.length; i++) 
-                    expected[i] = expected[i-1] + (route.durations[i-1] || 60000);
-                for(let i = baseIdx - 1; i >= 0; i--) 
-                    expected[i] = expected[i+1] - (route.durations[i] || 60000);
+                // baseIdx(取得した駅)を基準に前後の所要時間を加減算
+                for(let i = baseIdx + 1; i < route.stations.length; i++) {
+                    const dur = route.durations[i-1] || 60000;
+                    expected[i] = expected[i-1] + dur;
+                }
+                for(let i = baseIdx - 1; i >= 0; i--) {
+                    const dur = route.durations[i] || 60000;
+                    expected[i] = expected[i+1] - dur;
+                }
 
-                const now = Date.now();
+                // 現在位置の特定 (線形補間)
                 let pos = -1;
-                // 現在位置の特定
-                if (now < expected[0]) pos = 0;
-                else if (now > expected[expected.length-1]) pos = expected.length - 1;
-                else {
-                    for(let i=0; i<expected.length-1; i++) {
+                if (now < expected[0]) {
+                    pos = 0; // 始発前
+                } else if (now > expected[expected.length - 1]) {
+                    pos = expected.length - 1; // 終点通過
+                } else {
+                    for(let i = 0; i < expected.length - 1; i++) {
                         if (now >= expected[i] && now <= expected[i+1]) {
-                            pos = i + (now - expected[i]) / (expected[i+1] - expected[i]);
+                            const segmentDuration = expected[i+1] - expected[i];
+                            const elapsed = now - expected[i];
+                            pos = i + (elapsed / (segmentDuration || 1));
                             break;
                         }
                     }
@@ -163,17 +210,22 @@ async function updateTrains() {
 
                 if (pos !== -1) {
                     const isExpress = CONFIG.EXPRESS_KEYWORDS.some(k => arr.route.includes(k));
-                    const destIdx = route.stations.findIndex(s => norm(state.stationMap[s.split('_')[0]]).includes(norm(arr.destination)));
-                    const direction = (destIdx === -1 || destIdx > pos) ? "down" : "up";
+                    const destIdx = route.stations.findIndex(s => {
+                        const name = state.stationMap[s.split('_')[0]];
+                        return name && norm(name).includes(norm(arr.destination));
+                    });
+                    
+                    // 行き先インデックスと現在地の比較で方向決定
+                    const direction = (destIdx !== -1 && destIdx < pos) ? "up" : "down";
 
                     fetchedTrains.push({
                         dest: norm(arr.destination),
-                        service: norm(arr.route).replace(route.name, "").trim() || "普通",
+                        service: arrRouteName.replace(route.name, "").replace(/[\[\]]/g, "").trim() || "普通",
                         pos, direction, isExpress, expected, raw: arr
                     });
                 }
             });
-        } catch(e) {}
+        } catch(e) { console.error("Poll Error:", e); }
     }));
 
     state.trains = fetchedTrains;
