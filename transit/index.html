@@ -42,48 +42,37 @@ const CONFIG = {
 };
 
 const LANES = {
-    // 画面左側（下り：Down）
-    DOWN_EXPRESS: -55, // 一番左
-    DOWN_LOCAL:   -25, // 左から2番目
-    // 画面右側（上り：Up）
-    UP_LOCAL:      25, // 右から2番目
-    UP_EXPRESS:    55  // 一番右
+    UP_EXPRESS:   -70, // 最も左
+    UP_LOCAL:     -35, 
+    // (ここに中心線/駅の丸 0 が来る)
+    DOWN_LOCAL:    35, 
+    DOWN_EXPRESS:  70  // 最も右
 };
 
 const getXY = (p, isBranch, train = null, currentDrawingTrains = []) => {
     const route = state.unifiedRoutes[state.selectedIdx];
     
-    // baseXの決定（列車の属性を最優先）
-    let baseX = 400;
-    if (train && train.isBranch && p > route.splitIdx) {
-        baseX = 600;
-    } else if (!train && isBranch && p > route.splitIdx) {
-        baseX = 600;
-    }
-
+    // 支線判定（中心線の決定）
+    // 本線は 450, 支線は 750 程度にして重なりを防ぐ
+    let baseX = (isBranch && p > route.splitIdx) ? 750 : 450;
+    
     let xOffset = 0;
     if (train) {
-        // 日本の左側通行：下り(down)は左側(マイナス)、上り(up)は右側(プラス)
-        if (train.direction === "down") {
-            xOffset = train.isExpress ? LANES.DOWN_EXPRESS : LANES.DOWN_LOCAL;
-        } else {
+        // ユーザー様の指定通り：上りが左、下りが右
+        if (train.direction === "up") {
             xOffset = train.isExpress ? LANES.UP_EXPRESS : LANES.UP_LOCAL;
+        } else {
+            xOffset = train.isExpress ? LANES.DOWN_EXPRESS : LANES.DOWN_LOCAL;
         }
 
-        // --- 強力な重なり回避 (Jittering) ---
-        // 既に描画位置が決まった他の列車と「物理的なピクセル距離」で比較
-        let safetyMargin = 0;
+        // 衝突回避（上下線が同じ駅にいる際などの微調整）
         currentDrawingTrains.forEach(other => {
-            const distY = Math.abs((p + 1) * 90 - (other.pos + 1) * 90);
-            const distX = Math.abs((baseX + xOffset) - other.actualX);
-            
-            // アイコンサイズ(約44px)に対して近すぎる場合
-            if (distY < 40 && distX < 30) {
-                // 進行方向に向かって右側に少しずらす
-                safetyMargin += (train.direction === "down" ? -12 : 12);
+            const distY = Math.abs((p + 1) * 90 - other.y);
+            const distX = Math.abs((baseX + xOffset) - other.x);
+            if (distY < 45 && distX < 20) {
+                xOffset += 5; // わずかに右に逃がす
             }
         });
-        xOffset += safetyMargin;
     }
     
     return { x: baseX + xOffset, y: (p + 1) * 90 };
@@ -252,47 +241,51 @@ function render() {
     svg.style.height = h + "px";
 
     let draw = "";
-    
-    // 背景の4線路（不透明度を上げ、中心線を視覚化）
+    const renderedElements = []; // 重なり判定用保持
+
+    // 線路の描画
     const drawTracks = (bx, count, startP = 0) => {
         Object.values(LANES).forEach(offset => {
             const y1 = (startP + 1) * S;
             const y2 = (startP + count + startP) * S;
-            draw += `<line x1="${bx+offset}" y1="${y1}" x2="${bx+offset}" y2="${y2}" stroke="white" stroke-width="1" opacity="0.15" />`;
+            draw += `<line x1="${bx+offset}" y1="${y1}" x2="${bx+offset}" y2="${y2}" stroke="white" stroke-width="1" opacity="0.1" />`;
         });
     };
-    drawTracks(400, route.backbone.length);
-    if(route.branchStations.length > 0) drawTracks(600, route.branchStations.length, route.splitIdx + 1);
+    drawTracks(450, route.backbone.length);
+    if(route.branchStations.length > 0) drawTracks(750, route.branchStations.length, route.splitIdx + 1);
 
     // 駅の描画
     const renderStations = (sts, isBranch, startIdx = 0) => {
         sts.forEach((sId, i) => {
-            const p = getXY(i + startIdx, isBranch);
-            draw += `<rect x="${p.x - 75}" y="${p.y - 3}" width="150" height="6" fill="#334155" rx="2" />`;
-            draw += `<circle cx="${p.x}" cy="${p.y}" r="6" fill="${route.color}" stroke="white" stroke-width="2"/>`;
-            draw += `<text class="station-label" x="${p.x - 85}" y="${p.y + 5}" text-anchor="end">${clean(state.stationMap[sId.split('_')[0]])}</text>`;
+            const p = getXY(i + startIdx, isBranch); // train=nullなので x=baseX
+            // ホーム（全レーンをカバーする幅広の棒）
+            draw += `<rect x="${p.x - 85}" y="${p.y - 2}" width="170" height="4" fill="#475569" rx="1" />`;
+            // 駅の丸（中心）
+            draw += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="${route.color}" stroke="white" stroke-width="2"/>`;
+            // 駅名（最も左側へ：中心から120px左）
+            draw += `<text class="station-label" x="${p.x - 100}" y="${p.y + 5}" text-anchor="end" font-size="14">${clean(state.stationMap[sId.split('_')[0]])}</text>`;
         });
     };
     renderStations(route.backbone, false);
     renderStations(route.branchStations, true, route.splitIdx + 1);
 
-    // 列車の描画（座標を一時保存して重なりを計算）
-    const renderedCoords = [];
+    // 列車の描画
     state.trains.forEach((t, i) => {
-        const p = getXY(t.pos, t.isBranch, t, renderedCoords);
-        renderedCoords.push({ pos: t.pos, actualX: p.x }); // 座標を記録
+        const p = getXY(t.pos, t.isBranch, t, renderedElements);
+        renderedElements.push({ x: p.x, y: p.y });
 
         const [mainType, subType] = t.service.split('|');
+        const color = t.isExpress ? '#ef4444' : '#3b82f6';
         
         draw += `
         <g transform="translate(${p.x}, ${p.y})" style="cursor:pointer" onclick="showDetail(${i})">
-            <image href="${CONFIG.TRAIN_IMG}" x="-22" y="-22" width="44" height="44" />
-            <rect x="-26" y="-44" width="52" height="26" rx="4" fill="${t.isExpress ? '#ef4444' : '#3b82f6'}" opacity="0.95"/>
-            <text x="0" y="-32" fill="white" text-anchor="middle" font-weight="bold">
+            <image href="${CONFIG.TRAIN_IMG}" x="-20" y="-20" width="40" height="40" />
+            <rect x="-25" y="-45" width="50" height="26" rx="4" fill="${color}" opacity="0.9"/>
+            <text x="0" y="-33" fill="white" text-anchor="middle" font-weight="bold">
                 <tspan x="0" font-size="11">${mainType || ""}</tspan>
                 <tspan x="0" dy="11" font-size="8" opacity="0.9">${subType || ""}</tspan>
             </text>
-            <text x="0" y="38" fill="white" font-size="12" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:4px">${t.dest}</text>
+            <text x="0" y="36" fill="white" font-size="12" font-weight="bold" text-anchor="middle" style="paint-order:stroke; stroke:#0b1120; stroke-width:4px">${t.dest}</text>
         </g>`;
     });
 
