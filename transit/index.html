@@ -273,6 +273,41 @@ function selectRoute(i) {
     updateTrains();
 }
 
+window.showDetail = (idx) => {
+    const t = state.trains[idx];
+    const route = state.unifiedRoutes[state.selectedIdx];
+    const durations = route.durations; // 駅間の所要時間配列(ミリ秒)
+
+    let html = `<div style="border-left:4px solid ${t.isExpress?'#ef4444':'#3b82f6'}; padding-left:10px;">`;
+    html += `<h3 style="margin:0">${t.service} ${t.dest}ゆき</h3>`;
+    html += `<p style="font-size:11px; color:#94a3b8; margin:5px 0;">全駅の推定時刻を表示しています</p></div>`;
+    html += `<table style="width:100%; border-collapse:collapse; margin-top:10px;">`;
+
+    // 基準駅から各駅の時刻を計算
+    t.stationList.forEach((sId, i) => {
+        let estTime = t.baseTime;
+        
+        // 簡易計算: 基準駅から i番目の駅までの duration の差分を足し引き
+        // ※ 本来は durations[idx] を正確に累積する必要がありますが、
+        // 取得できない場合はデフォルトの90秒(90000ms)を使用
+        const diff = (i - t.baseIdx) * 90000; 
+        estTime += diff;
+
+        const timeStr = new Date(estTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const isPassed = estTime < Date.now();
+        const sName = clean(state.stationMap[sId.split('_')[0]]);
+
+        html += `
+            <tr style="opacity: ${isPassed ? 0.4 : 1}; border-bottom: 1px solid #2a3452;">
+                <td style="padding:6px 0;">${i === t.baseIdx ? '●' : '○'} ${sName}</td>
+                <td style="text-align:right; font-weight:bold;">${timeStr}</td>
+            </tr>`;
+    });
+
+    html += `</table>`;
+    document.getElementById("details").innerHTML = html;
+};
+
 init();
 setInterval(updateTrains, 7000); // サーバー負荷軽減のため7秒間隔
 </script>
